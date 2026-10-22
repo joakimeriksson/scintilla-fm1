@@ -2,10 +2,10 @@
 # SPDX-License-Identifier: GPL-3.0-only
 """The engine's reverb against the app's, impulse by impulse.
 
-    tools/reverb_check.py [OUTDIR]          (needs build/sx_render: tests/run.sh or cc it)
+    tools/reverb_check.py [OUTDIR]          (needs build/sc_render: tests/run.sh or cc it)
 
 The app's impulse is noise (tools/reverb_ir.mjs runs synthex-web's own buildIR and Chrome's scale);
-the engine's is a feedback delay network (sx_synth.c). They cannot match sample for sample, so this
+the engine's is a feedback delay network (sc_synth.c). They cannot match sample for sample, so this
 measures what a listener hears of a reverb, for every algorithm at sizes 0, 0.5, 1 and dampings 0,
 0.5, 0.9: the energy (the wet level), the decay time (a line through the Schroeder curve from -5 to
 -35 dB), the spectrum (1/3 octaves from 63 Hz, 20 ms to 0.5 s in, level removed), how much of the
@@ -52,7 +52,7 @@ def main():
                 fa, fc = out / f"app-{a}-{size}-{damp}.f32", out / f"c-{a}-{size}-{damp}.f32"
                 subprocess.run(["node", "--experimental-transform-types", "--no-warnings", "tools/reverb_ir.mjs",
                                 str(a), str(size), str(damp), str(fa)], cwd=ROOT, check=True)
-                subprocess.run([str(ROOT / "build/sx_render"), "reverb", str(a), str(size), str(damp),
+                subprocess.run([str(ROOT / "build/sc_render"), "reverb", str(a), str(size), str(damp),
                                 str(1.5 * n / FS), str(fc)], cwd=ROOT, check=True)
                 subprocess.run(["node", "--experimental-transform-types", "--no-warnings", "tools/reverb_ir.mjs",
                                 str(a), str(size), str(damp), str(fa) + ".2"], cwd=ROOT, check=True)

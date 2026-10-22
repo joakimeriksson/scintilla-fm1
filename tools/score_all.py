@@ -17,7 +17,7 @@ LEVEL_DB = 0.25        # rms level difference
 SPEC_DB = 0.5          # mean |spectrum difference|
 
 root = Path(sys.argv[1])
-names = subprocess.run(["build/sx_render", "list"], capture_output=True, text=True).stdout.splitlines()
+names = subprocess.run(["build/sc_render", "list"], capture_output=True, text=True).stdout.splitlines()
 rows, bad = [], 0
 for d in sorted(p for p in root.iterdir() if p.is_dir()):
     for ref in sorted(d.glob("[0-9]*.f32"), key=lambda p: int(p.stem)):

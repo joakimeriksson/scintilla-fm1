@@ -8,9 +8,9 @@
 set -e
 cd "$(dirname "$0")/.."
 mkdir -p build
-cc -O2 -Wall -Wextra -Wno-unused-function -o build/sx_render host/sx_render.c engine/sx_voice.c engine/sx_synth.c -lm
-cc -O2 -Wno-unused-function -DSX_TEST_GENERAL -o build/sx_render_general host/sx_render.c engine/sx_voice.c engine/sx_synth.c -lm
-n=$(./build/sx_render list | wc -l | tr -d ' ')
+cc -O2 -Wall -Wextra -Wno-unused-function -o build/sc_render host/sc_render.c engine/sc_voice.c engine/sc_synth.c -lm
+cc -O2 -Wno-unused-function -DSX_TEST_GENERAL -o build/sc_render_general host/sc_render.c engine/sc_voice.c engine/sc_synth.c -lm
+n=$(./build/sc_render list | wc -l | tr -d ' ')
 for sc in tests/scenarios/*.txt; do
     name=$(basename "$sc" .txt)
     mkdir -p "build/cmp/$name"
@@ -19,9 +19,9 @@ for sc in tests/scenarios/*.txt; do
     node --experimental-transform-types --no-warnings tools/ref_render.mjs all "$sc" "build/cmp/$name/again" --nudge
     i=0
     while [ "$i" -lt "$n" ]; do
-        ./build/sx_render voice "$i" "$sc" "build/cmp/$name/c$i.f32"
+        ./build/sc_render voice "$i" "$sc" "build/cmp/$name/c$i.f32"
         # the staged render (block passes) must be the per-sample one, bit for bit
-        ./build/sx_render_general voice "$i" "$sc" "build/cmp/$name/g$i.f32"
+        ./build/sc_render_general voice "$i" "$sc" "build/cmp/$name/g$i.f32"
         cmp -s "build/cmp/$name/c$i.f32" "build/cmp/$name/g$i.f32" || { echo "staged != general: preset $i, $name"; exit 1; }
         i=$((i + 1))
     done

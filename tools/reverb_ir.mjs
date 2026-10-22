@@ -5,13 +5,13 @@
 // 44100 / rate). Stereo float32, interleaved.
 //
 //   node --experimental-transform-types tools/reverb_ir.mjs ALGO SIZE DAMP OUT.f32
-//   ALGO 0..3 (plate room hall galactic, sx_patch.h's order), SIZE DAMP 0..1
+//   ALGO 0..3 (plate room hall galactic, sc_patch.h's order), SIZE DAMP 0..1
 import { writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { SYNTHEX } from './gen_presets.mjs'
+import { SYNTHEX_WEB } from './gen_presets.mjs'
 
 const [algo, size, damp, out] = process.argv.slice(2)
-const { SynthReverb } = await import(join(SYNTHEX, 'packages/engine/src/fx/reverb.ts'))
+const { SynthReverb } = await import(join(SYNTHEX_WEB, 'packages/engine/src/fx/reverb.ts'))
 const ALGO = ['plate', 'room', 'hall', 'galactic'][+algo]
 const RECIPES = { plate: [0.6, 2.5], room: [0.3, 1.4], hall: [1.2, 4.5], galactic: [3.0, 9.0] }  // setParams'
 const sr = 44100

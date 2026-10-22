@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
-"""Synthex in fm1-emu's fm1-live (headless, JIT), as the FM-1 runs it: the sound and the screen.
+"""Scintilla in fm1-emu's fm1-live (headless, JIT), as the FM-1 runs it: the sound and the screen.
 
-  tests/emu.py [--ms 3000] [--keys SCRIPT] [--out build/emu/run] [--fwsc build/synthex.fwsc]
+  tests/emu.py [--ms 3000] [--keys SCRIPT] [--out build/emu/run] [--fwsc build/scintilla.fwsc]
       -> OUT/audio.wav and OUT/panel.png (the whole panel, the screen in it, at the end)
 
 SCRIPT is fm1-live's FM1_BENCH_KEYS: `ms:id` presses a key or a button by id (`ms:id^` releases;
@@ -16,7 +16,7 @@ SRC = Path(__file__).resolve().parents[1]
 LIVE = Path(os.environ.get("FM1_LIVE", Path.home() / "work/fm1-emu/target/release/fm1-live"))
 
 
-def run(keys, ms, out, fwsc=SRC / "build" / "synthex.fwsc", ram=False):
+def run(keys, ms, out, fwsc=SRC / "build" / "scintilla.fwsc", ram=False):
     out = Path(out)
     out.mkdir(parents=True, exist_ok=True)
     env = dict(os.environ, FM1_BENCH_KEYS=keys)
@@ -51,7 +51,7 @@ if __name__ == "__main__":
     ap.add_argument("--ms", type=int, default=3000)
     ap.add_argument("--keys", default="")
     ap.add_argument("--out", default=str(SRC / "build" / "emu" / "run"))
-    ap.add_argument("--fwsc", default=str(SRC / "build" / "synthex.fwsc"))
+    ap.add_argument("--fwsc", default=str(SRC / "build" / "scintilla.fwsc"))
     a = ap.parse_args()
     s, log = run(a.keys, a.ms, a.out, a.fwsc)
     for ln in log.splitlines():

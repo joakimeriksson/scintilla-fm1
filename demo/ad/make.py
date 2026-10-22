@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
-"""The Synthex laser-harp commercial: three parts played on the emulated FM-1, then laid end to end.
+"""The Scintilla laser-harp commercial: three parts played on the emulated FM-1, then laid end to end.
 
-    demo/ad/make.py            -> build/ad/synthex-laser-harp-ad.wav
+    demo/ad/make.py            -> build/ad/scintilla-laser-harp-ad.wav
 
 Each part is rendered by fm1/listen.py (so each is the FM-1's own output, checked sample for
 sample against this computer's render); the only thing done here is the edit - where each part
@@ -25,7 +25,7 @@ def load(p):
 
 
 def main():
-    out = ROOT / "build/ad/synthex-laser-harp-ad.wav"
+    out = ROOT / "build/ad/scintilla-laser-harp-ad.wav"
     parts = []
     for name, preset, at, db, fi, fo in PARTS:
         wav = ROOT / f"build/ad/{name}.wav"

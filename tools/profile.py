@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-only
 """Where the engine's instructions go on the emulated FM-1: trace one timed block of one bench
 config (fm1-emu FM1_TRACE_RANGE) and charge every instruction to its function in
-build/fm1/bench.dis, and inside sx_voice_render to the source loop it belongs to.
+build/fm1/bench.dis, and inside sc_voice_render to the source loop it belongs to.
 
     tools/profile.py [CONFIG]       CONFIG: an index into fm1/workload.h's WL (default 2)"""
 import bisect, collections, os, re, subprocess, sys

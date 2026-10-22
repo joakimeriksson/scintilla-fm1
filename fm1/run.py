@@ -36,7 +36,7 @@ def cc():
 
 def host_hashes():
     exe = ROOT / "build/host_bench"
-    subprocess.run([*cc(), "-O2", "-o", str(exe), "fm1/host_bench.c", "engine/sx_voice.c", "engine/sx_synth.c"],
+    subprocess.run([*cc(), "-O2", "-o", str(exe), "fm1/host_bench.c", "engine/sc_voice.c", "engine/sc_synth.c"],
                    cwd=ROOT, check=True)
     return [int(h, 16) for h in subprocess.run([str(exe)], check=True, capture_output=True, text=True).stdout.split()]
 
@@ -64,7 +64,7 @@ def main():
     if len(steps) < 2 * len(configs) or not mem or mem[0] != 0x42465853:  # (the bench halts itself)
         sys.exit(f"the bench did not finish:\n{out.stdout[-1500:]}\n{out.stderr[-1500:]}")
     want = host_hashes()
-    print(f"Synthex engine on the emulated FM-1 (pi32v2 {opt}), {FS} Hz, {MHZ} MHz, one core;")
+    print(f"Scintilla engine on the emulated FM-1 (pi32v2 {opt}), {FS} Hz, {MHZ} MHz, one core;")
     print(f"a block is {BLOCK} frames = {BUDGET:,.0f} instructions of budget (half of it is the safe line).\n")
     print(f" {'config':30} {'voices':>6} {'instr/block':>12} {'per voice-sample':>17} {'% of a core':>12}  = host")
     ok = True

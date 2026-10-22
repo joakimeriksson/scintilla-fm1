@@ -6,15 +6,15 @@
 #ifndef WORKLOAD_H
 #define WORKLOAD_H
 #include <stdint.h>
-#include "../engine/sx_synth.h"
-#include "../engine/sx_presets.h"
+#include "../engine/sc_synth.h"
+#include "../engine/sc_presets.h"
 
 #define WL_WARM   4
 #define WL_BLOCKS 16
 
 typedef struct { const char *what; int preset, voices, double_layer; } wl_config_t;
 
-/* presets by index (build/sx_render list) */
+/* presets by index (build/sc_render list) */
 static const wl_config_t WL[] = {
     { "Chunky Synth: 2 saws, lp24", 0, 1, 0 },
     { "Chunky Synth: 2 saws, lp24", 0, 4, 0 },
@@ -26,21 +26,21 @@ static const wl_config_t WL[] = {
 };
 #define WL_N ((int)(sizeof WL / sizeof WL[0]))
 
-static sx_synth_t wl_synth;
+static sc_synth_t wl_synth;
 
 static void wl_start(const wl_config_t *c)
 {
     static const uint8_t chord[8] = { 48, 55, 60, 64, 67, 71, 74, 79 };
-    sx_patch_t p = SX_PRESETS[c->preset];
-    if (c->double_layer) { p.voice_mode = SX_VM_DOUBLE; p.layer[1] = p.layer[0]; }
-    sx_init(&wl_synth, &p);
-    for (int i = 0; i < c->voices; i++) sx_post(&wl_synth, SX_EV_NOTE_ON, chord[i], 52000);
+    sc_patch_t p = SC_PRESETS[c->preset];
+    if (c->double_layer) { p.voice_mode = SC_VM_DOUBLE; p.layer[1] = p.layer[0]; }
+    sc_init(&wl_synth, &p);
+    for (int i = 0; i < c->voices; i++) sc_post(&wl_synth, SC_EV_NOTE_ON, chord[i], 52000);
 }
 
 static void wl_block(int32_t *out)
 {
     for (int i = 0; i < 512; i++) out[i] = 0;
-    sx_render(&wl_synth, out, 256);
+    sc_render(&wl_synth, out, 256);
 }
 
 static uint32_t wl_hash(uint32_t h, const int32_t *out)

@@ -1,16 +1,16 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* One held note on preset 36 "Ring mod." with fields overridden from the command line, for
  * demo/ad/fit/fit.py: one_note OUT.raw NOTE ON_S OFF_S DUR_S [field=value ...] -> 16-bit stereo.
- * Fields are sx_layer_t's (both layers) by name, plus a few patch-wide ones; values are raw Q16. */
+ * Fields are sc_layer_t's (both layers) by name, plus a few patch-wide ones; values are raw Q16. */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "../../../engine/sx_synth.h"
-#include "../../../engine/sx_presets.h"
+#include "../../../engine/sc_synth.h"
+#include "../../../engine/sc_presets.h"
 
-static sx_synth_t S;
+static sc_synth_t S;
 
-static int set(sx_patch_t *p, const char *k, int32_t v)
+static int set(sc_patch_t *p, const char *k, int32_t v)
 {
 #define L(name, expr) if (!strcmp(k, name)) { for (int i = 0; i < 2; i++) p->layer[i].expr = v; return 1; }
     L("o1_pwm", o1_pwm) L("o2_pwm", o2_pwm) L("o2_detune", o2_detune) L("mix_o1", mix_o1) L("mix_o2", mix_o2)
@@ -32,8 +32,8 @@ static int set(sx_patch_t *p, const char *k, int32_t v)
 int main(int argc, char **argv)
 {
     if (argc < 6) { fprintf(stderr, "usage: one_note OUT.raw NOTE ON_S OFF_S DUR_S [field=value ...]\n"); return 2; }
-    static sx_patch_t p;
-    p = SX_PRESETS[36];
+    static sc_patch_t p;
+    p = SC_PRESETS[36];
     for (int i = 6; i < argc; i++) {
         char *e = strchr(argv[i], '=');
         if (!e) return 2;
@@ -43,15 +43,15 @@ int main(int argc, char **argv)
     int note = atoi(argv[2]);
     uint32_t on = (uint32_t)(atof(argv[3]) * 44100) / 256, off = (uint32_t)(atof(argv[4]) * 44100) / 256;
     uint32_t frames = (uint32_t)(atof(argv[5]) * 44100);
-    sx_init(&S, &p);
+    sc_init(&S, &p);
     int16_t *pcm = malloc((size_t)frames * 4), *q = pcm;
     static int32_t blk[512];
     for (uint32_t i = 0, b = 0; i < frames; i += 256, b++) {
         uint32_t m = frames - i < 256 ? frames - i : 256;
-        if (b == on) sx_post(&S, SX_EV_NOTE_ON, note, 65536);
-        if (b == off) sx_post(&S, SX_EV_NOTE_OFF, note, 0);
+        if (b == on) sc_post(&S, SC_EV_NOTE_ON, note, 65536);
+        if (b == off) sc_post(&S, SC_EV_NOTE_OFF, note, 0);
         memset(blk, 0, sizeof blk);
-        sx_render(&S, blk, m);
+        sc_render(&S, blk, m);
         for (uint32_t k = 0; k < 2 * m; k++) *q++ = (int16_t)blk[k];
     }
     FILE *f = fopen(argv[1], "wb");

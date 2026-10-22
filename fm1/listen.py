@@ -37,7 +37,7 @@ def main():
     subprocess.run([str(ROOT / "fm1/build.sh"), opt], cwd=ROOT, check=True, stdout=subprocess.DEVNULL)
 
     exe = ROOT / "build/host_play"
-    subprocess.run([*cc(), "-O2", "-o", str(exe), "fm1/host_play.c", "engine/sx_voice.c", "engine/sx_synth.c"],
+    subprocess.run([*cc(), "-O2", "-o", str(exe), "fm1/host_play.c", "engine/sc_voice.c", "engine/sc_synth.c"],
                    cwd=ROOT, check=True)
     want = subprocess.run([str(exe)], check=True, capture_output=True).stdout
     frames = len(want) // 4

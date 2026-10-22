@@ -1,11 +1,11 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* Render a scenario (tools/scenario.mjs) through the C engine on this computer.
  *
- *   sx_render voice PRESET SCENARIO OUT.f32   one sx_voice, every note into it: what
+ *   sc_render voice PRESET SCENARIO OUT.f32   one sc_voice, every note into it: what
  *                                             tools/ref_render.mjs does with VoiceCore (mono float32)
- *   sx_render synth PRESET SCENARIO OUT.wav   the whole instrument (16-bit stereo WAV)
- *   sx_render list                            the presets, by index
- *   sx_render reverb ALGO SIZE DAMP SEC OUT.f32   the reverb's impulse response alone, wet only
+ *   sc_render synth PRESET SCENARIO OUT.wav   the whole instrument (16-bit stereo WAV)
+ *   sc_render list                            the presets, by index
+ *   sc_render reverb ALGO SIZE DAMP SEC OUT.f32   the reverb's impulse response alone, wet only
  *                                             (stereo float32; ALGO 0..3, SIZE DAMP 0..1)
  *
  * The host may use floats and stdio; the engine (engine/) may not. */
@@ -13,9 +13,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-#include "../engine/sx_synth.h"
-#include "../engine/sx_fixed.h"
-#include "../engine/sx_presets.h"
+#include "../engine/sc_synth.h"
+#include "../engine/sc_fixed.h"
+#include "../engine/sc_presets.h"
 
 typedef struct { double t; int on, note; double vel; } ev_t;
 typedef struct { double dur; ev_t ev[1024]; int n; int has_joy, has_perf; double joy[2], perf[4]; } scen_t;
@@ -49,44 +49,44 @@ static void parse(const char *path, scen_t *sc)
 
 static int32_t q16(double v) { return (int32_t)lround(v * 65536.0); }
 
-static void perf_of(const scen_t *sc, sx_perf_t *p)
+static void perf_of(const scen_t *sc, sc_perf_t *p)
 {
-    sx_perf_default(p);
+    sc_perf_default(p);
     if (sc->has_joy) { p->joy_x = q16(sc->joy[0]); p->joy_y = q16(sc->joy[1]); }
     if (sc->has_perf) { p->bend_osc = q16(sc->perf[0]); p->bend_filt = q16(sc->perf[1]); p->lfo2_osc = q16(sc->perf[2]); p->lfo2_filt = q16(sc->perf[3]); }
 }
 
 /* render.ts's loop: events land on the first sample at or after their time, runs end at the next */
-static void run_voice(const sx_patch_t *P, const scen_t *sc, const char *out)
+static void run_voice(const sc_patch_t *P, const scen_t *sc, const char *out)
 {
-    long n = (long)floor(sc->dur * SX_FS);
+    long n = (long)floor(sc->dur * SC_FS);
     int32_t *buf = calloc((size_t)n, sizeof *buf);
     float *f = malloc((size_t)n * sizeof *f);
-    sx_perf_t perf;
-    sx_prep_t prep;
-    sx_voice_t v;
+    sc_perf_t perf;
+    sc_prep_t prep;
+    sc_voice_t v;
     perf_of(sc, &perf);
-    sx_prep(&prep, &P->layer[0], &perf);
-    sx_voice_init(&v, 12345);
+    sc_prep(&prep, &P->layer[0], &perf);
+    sc_voice_init(&v, 12345);
     int e = 0;
     long i = 0;
     while (i < n) {
-        double t = (double)i / SX_FS;
+        double t = (double)i / SC_FS;
         while (e < sc->n && sc->ev[e].t <= t) {
-            if (sc->ev[e].on) sx_voice_note_on(&v, &prep, sc->ev[e].note, q16(sc->ev[e].vel));
-            else sx_voice_note_off(&v, &prep);
+            if (sc->ev[e].on) sc_voice_note_on(&v, &prep, sc->ev[e].note, q16(sc->ev[e].vel));
+            else sc_voice_note_off(&v, &prep);
             e++;
         }
         long next = n;
         if (e < sc->n) {
-            long c = (long)ceil(sc->ev[e].t * SX_FS);
+            long c = (long)ceil(sc->ev[e].t * SC_FS);
             next = c < i + 1 ? i + 1 : c > n ? n : c;
         }
         /* runs of at most 128, as tools/ref_render.mjs (the AudioWorklet's quantum): a voice checks
          * for silence only at the start of a run, so the run length is part of what it plays */
         while (i < next) {
             long m = next - i > 128 ? 128 : next - i;
-            sx_voice_render(&v, &prep, buf + i, (uint32_t)m);
+            sc_voice_render(&v, &prep, buf + i, (uint32_t)m);
             i += m;
         }
     }
@@ -102,18 +102,18 @@ static void wav_header(FILE *o, long frames)
     uint16_t h;
     fwrite("RIFF", 1, 4, o); v = 36 + data; fwrite(&v, 4, 1, o); fwrite("WAVEfmt ", 1, 8, o);
     v = 16; fwrite(&v, 4, 1, o); h = 1; fwrite(&h, 2, 1, o); h = 2; fwrite(&h, 2, 1, o);
-    v = SX_FS; fwrite(&v, 4, 1, o); v = SX_FS * 4; fwrite(&v, 4, 1, o); h = 4; fwrite(&h, 2, 1, o);
+    v = SC_FS; fwrite(&v, 4, 1, o); v = SC_FS * 4; fwrite(&v, 4, 1, o); h = 4; fwrite(&h, 2, 1, o);
     h = 16; fwrite(&h, 2, 1, o); fwrite("data", 1, 4, o); fwrite(&data, 4, 1, o);
 }
 
 /* the instrument in 256-frame blocks, as the FM-1 calls it; events at block starts */
-static void run_synth(const sx_patch_t *P, const scen_t *sc, const char *out)
+static void run_synth(const sc_patch_t *P, const scen_t *sc, const char *out)
 {
-    static sx_synth_t s;
-    long n = (long)floor(sc->dur * SX_FS);
-    sx_init(&s, P);
+    static sc_synth_t s;
+    long n = (long)floor(sc->dur * SC_FS);
+    sc_init(&s, P);
     perf_of(sc, &s.perf);
-    sx_reprep(&s);
+    sc_reprep(&s);
     FILE *o = fopen(out, "wb");
     wav_header(o, n);
     int e = 0;
@@ -121,13 +121,13 @@ static void run_synth(const sx_patch_t *P, const scen_t *sc, const char *out)
     int16_t pcm[512];
     for (long i = 0; i < n; i += 256) {
         uint32_t m = (uint32_t)(n - i < 256 ? n - i : 256);
-        while (e < sc->n && sc->ev[e].t * SX_FS < i + m) {
-            if (sc->ev[e].on) sx_post(&s, SX_EV_NOTE_ON, (uint8_t)sc->ev[e].note, q16(sc->ev[e].vel));
-            else sx_post(&s, SX_EV_NOTE_OFF, (uint8_t)sc->ev[e].note, 0);
+        while (e < sc->n && sc->ev[e].t * SC_FS < i + m) {
+            if (sc->ev[e].on) sc_post(&s, SC_EV_NOTE_ON, (uint8_t)sc->ev[e].note, q16(sc->ev[e].vel));
+            else sc_post(&s, SC_EV_NOTE_OFF, (uint8_t)sc->ev[e].note, 0);
             e++;
         }
         memset(blk, 0, sizeof blk);
-        sx_render(&s, blk, m);
+        sc_render(&s, blk, m);
         for (uint32_t k = 0; k < 2 * m; k++) pcm[k] = (int16_t)blk[k];
         fwrite(pcm, 2, 2 * m, o);
     }
@@ -137,24 +137,24 @@ static void run_synth(const sx_patch_t *P, const scen_t *sc, const char *out)
 int main(int argc, char **argv)
 {
     if (argc >= 2 && !strcmp(argv[1], "list")) {
-        for (int i = 0; i < SX_N_PRESETS; i++)
-            printf("%2d  %s %2d  %s\n", i, SX_PRESET_ADDR[i] >= 100 ? "MEM" : "PRE", SX_PRESET_ADDR[i] % 100, SX_PRESETS[i].name);
+        for (int i = 0; i < SC_N_PRESETS; i++)
+            printf("%2d  %s %2d  %s\n", i, SC_PRESET_ADDR[i] >= 100 ? "MEM" : "PRE", SC_PRESET_ADDR[i] % 100, SC_PRESETS[i].name);
         return 0;
     }
     if (argc == 7 && !strcmp(argv[1], "reverb")) {
-        static sx_reverb_t r;
-        sx_reverb_p_t rp = { 1, (int8_t)atoi(argv[2]), q16(atof(argv[3])), q16(atof(argv[4])), SX_ONE16 };
-        sx_reverb_prep(&r, &rp);
+        static sc_reverb_t r;
+        sc_reverb_p_t rp = { 1, (int8_t)atoi(argv[2]), q16(atof(argv[3])), q16(atof(argv[4])), SC_ONE16 };
+        sc_reverb_prep(&r, &rp);
         r.dry = 0;
-        uint32_t frames = (uint32_t)(atof(argv[5]) * SX_FS);
+        uint32_t frames = (uint32_t)(atof(argv[5]) * SC_FS);
         float *out = malloc((size_t)frames * 2 * sizeof *out);
         int32_t L[256], R[256];
         for (uint32_t i = 0; i < frames; i += 256) {
             uint32_t m = frames - i < 256 ? frames - i : 256;
             memset(L, 0, sizeof L); memset(R, 0, sizeof R);
-            if (i == 0) L[0] = R[0] = SX_ONE20;                         /* a unit impulse, both sides */
-            sx_reverb_run(&r, L, R, m);
-            for (uint32_t k = 0; k < m; k++) { out[2 * (i + k)] = (float)L[k] / SX_ONE20; out[2 * (i + k) + 1] = (float)R[k] / SX_ONE20; }
+            if (i == 0) L[0] = R[0] = SC_ONE20;                         /* a unit impulse, both sides */
+            sc_reverb_run(&r, L, R, m);
+            for (uint32_t k = 0; k < m; k++) { out[2 * (i + k)] = (float)L[k] / SC_ONE20; out[2 * (i + k) + 1] = (float)R[k] / SC_ONE20; }
         }
         FILE *f = fopen(argv[6], "wb");
         if (!f) { perror(argv[6]); return 1; }
@@ -162,12 +162,12 @@ int main(int argc, char **argv)
         fclose(f);
         return 0;
     }
-    if (argc != 5) { fprintf(stderr, "usage: sx_render voice|synth PRESET SCENARIO OUT | reverb ... | list\n"); return 2; }
+    if (argc != 5) { fprintf(stderr, "usage: sc_render voice|synth PRESET SCENARIO OUT | reverb ... | list\n"); return 2; }
     int p = atoi(argv[2]);
-    if (p < 0 || p >= SX_N_PRESETS) { fprintf(stderr, "no preset %d\n", p); return 2; }
+    if (p < 0 || p >= SC_N_PRESETS) { fprintf(stderr, "no preset %d\n", p); return 2; }
     scen_t *sc = malloc(sizeof *sc);
     parse(argv[3], sc);
-    if (!strcmp(argv[1], "voice")) run_voice(&SX_PRESETS[p], sc, argv[4]);
-    else run_synth(&SX_PRESETS[p], sc, argv[4]);
+    if (!strcmp(argv[1], "voice")) run_voice(&SC_PRESETS[p], sc, argv[4]);
+    else run_synth(&SC_PRESETS[p], sc, argv[4]);
     return 0;
 }

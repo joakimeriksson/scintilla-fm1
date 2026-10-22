@@ -1,6 +1,6 @@
 # Licensing
 
-Synthex for the FM-1, like the Dinghy it is built on, is free software under the GNU General Public License, version 3 only (`GPL-3.0-only`, full text in
+Scintilla, like the Dinghy it is built on, is free software under the GNU General Public License, version 3 only (`GPL-3.0-only`, full text in
 `LICENSE`). You may use, study, change and share it. If you give someone a firmware built from it, give them its
 complete source under the same licence too.
 
@@ -10,7 +10,7 @@ complete source under the same licence too.
 | --- | --- |
 | The platform: `firmware/hal/`, `firmware/loader/`, `crt0.S`, `app.ld`, `firmware/src/` (`usb.c`, `ota.c`, `recovery.c`, `lcd.c`, `gfx.c`, `libc.c`, `bootguard.h`, `uac_fir.h`), `tools/` | Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments ([Felucca](https://github.com/hugelton/Felucca)), with the changes of [SLOOP](https://github.com/isod89/sloop-fm1) (isod89) |
 | The wiring `platform.c`, the host mode `tests/host.c`, `tests/run_host.sh`, the docs in `docs/` | zvenson ([Dinghy](https://github.com/zvenson/dinghy)) |
-| The app `firmware/src/synthex.c`, `tests/emu.py`, `tests/emu_test.py`, `tests/engine_ref.c`, the engine `../engine` | Joakim Eriksson |
+| The app `firmware/src/scintilla.c`, `tests/emu.py`, `tests/emu_test.py`, `tests/engine_ref.c`, the engine `../engine` | Joakim Eriksson |
 
 ## Third-party material
 

@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* Synthex for the FM-1: the Elka Synthex engine of synthex-web (VoiceCore and its instrument, ported
+/* Scintilla: the Elka Synthex engine of synthex-web (VoiceCore and its instrument, ported
  * to integers in ../../../engine, verified against it there) on Dinghy's platform (platform.c: the
  * updater, the USB rescue, USB-MIDI, USB audio, the panel, the screen, the settings sector).
  *
@@ -24,8 +24,8 @@
 #define APP_EARLY_INIT din_init                 /* the DIN jack's UART, before platform.c starts the key scan */
 static void din_init(void);
 #include "platform.c"
-#include "sx_synth.h"
-#include "sx_presets.h"
+#include "sc_synth.h"
+#include "sc_presets.h"
 
 /* ---- MIDI from the DIN jack: UART1 DMAs into a ring filled with 0xFF (a byte MIDI never sends here:
  * it is a reset), read by content (hal/fm1_uart.h; as fm1-harbor). Channel messages only. */
@@ -76,11 +76,11 @@ static int din_get(uint8_t *st, uint8_t *d1, uint8_t *d2) { (void)st; (void)d1; 
 
 /* ---- the sound (the audio ISR) */
 #ifdef DINGHY_HOST                             /* (a Mach-O section needs "segment,section", as gfx.c's) */
-static sx_synth_t syn;
+static sc_synth_t syn;
 #else
-static sx_synth_t syn __attribute__((section(".pool")));   /* 80 KB with the reverb's lines: not in .bss's 96 */
+static sc_synth_t syn __attribute__((section(".pool")));   /* 80 KB with the reverb's lines: not in .bss's 96 */
 #endif
-static sx_patch_t staged;                       /* a preset on its way in: the main loop writes it, then load_req */
+static sc_patch_t staged;                       /* a preset on its way in: the main loop writes it, then load_req */
 static volatile uint32_t load_req, ready;       /* main -> ISR / ISR -> main */
 static volatile uint32_t cpu_pub;               /* the slowest render of the last second, in fm1_ticks */
 #define BLOCK_TICKS (HALF_FRAMES * 1000000u / FS * FM1_TICKS_PER_US)   /* 5.8 ms of ticks: 100 % */
@@ -90,14 +90,14 @@ static void app_audio(int32_t *out, uint32_t n)
     static uint32_t worst, blocks;
     uint32_t t0, dt;
     if (load_req) {                             /* a whole new sound, between two blocks */
-        sx_init(&syn, &staged);
+        sc_init(&syn, &staged);
         load_req = 0;
         ready = 1;
     }
     if (!ready)
         return;
     t0 = fm1_ticks();
-    sx_render(&syn, out, n);
+    sc_render(&syn, out, n);
     dt = fm1_ticks() - t0;
     if (dt > worst) worst = dt;
     if (++blocks >= FS / HALF_FRAMES) { cpu_pub = worst; worst = 0; blocks = 0; }
@@ -127,10 +127,10 @@ static const char *const L_KEYS[] = {"POLY", "MONO", "UNISON"};
 static const char *const L_CHO[] = {"OFF", "1", "2", "3"};
 static const char *const L_REV[] = {"OFF", "PLATE", "ROOM", "HALL", "GALACTIC"};
 
-#define LO(f) ((uint16_t)__builtin_offsetof(sx_layer_t, f))
-#define PO(f) ((uint16_t)__builtin_offsetof(sx_patch_t, f))
-#define FO(f) ((uint16_t)__builtin_offsetof(sx_perf_t, f))
-#define Q(x) SX_Q16(x)
+#define LO(f) ((uint16_t)__builtin_offsetof(sc_layer_t, f))
+#define PO(f) ((uint16_t)__builtin_offsetof(sc_patch_t, f))
+#define FO(f) ((uint16_t)__builtin_offsetof(sc_perf_t, f))
+#define Q(x) SC_Q16(x)
 #define LIN(n, f, lo, hi, st, u) { n, W_LAYER, K_LIN, u, LO(f), NO_OFF, Q(lo), Q(hi), Q(st), 0 }
 #define EXP(n, f, lo, hi, u) { n, W_LAYER, K_EXP, u, LO(f), NO_OFF, Q(lo), Q(hi), Q(lo), 0 }
 #define ENUM(n, f, lo, hi, l) { n, W_LAYER, K_ENUM, U_NUM, LO(f), NO_OFF, lo, hi, 1, l }
@@ -151,8 +151,8 @@ static const prm_t PAGE[][4] = {
     { ADSR(env_f) },
     { ADSR(env_a) },
     { EXP("RATE", lfo[0].rate, 0.05, 20, U_HZ), ENUM("SHAPE", lfo[0].shape, 0, 5, L_LFO),
-      { "PITCH", W_LAYER, K_LIN, U_NUM, LO(mm[SX_MM_L1_P1]), LO(mm[SX_MM_L1_P2]), 0, Q(1), Q(0.01), 0 },
-      LIN("CUTOFF", mm[SX_MM_L1_CUT], 0, 1, 0.01, U_NUM) },
+      { "PITCH", W_LAYER, K_LIN, U_NUM, LO(mm[SC_MM_L1_P1]), LO(mm[SC_MM_L1_P2]), 0, Q(1), Q(0.01), 0 },
+      LIN("CUTOFF", mm[SC_MM_L1_CUT], 0, 1, 0.01, U_NUM) },
     { EXP("RATE", lfo[1].rate, 0.05, 20, U_HZ), ENUM("SHAPE", lfo[1].shape, 0, 5, L_LFO),
       { "PITCH", W_PERF, K_LIN, U_NUM, FO(lfo2_osc), NO_OFF, 0, Q(1), Q(0.01), 0 },
       { "CUTOFF", W_PERF, K_LIN, U_NUM, FO(lfo2_filt), NO_OFF, 0, Q(1), Q(0.01), 0 } },
@@ -203,7 +203,7 @@ static int32_t clamp32(int32_t v, int32_t lo, int32_t hi) { return v < lo ? lo :
 /* turn a parameter by d detents (acc: steps a detent, by the knob's speed); each layer moves from its own value */
 static void prm_turn(const prm_t *p, int32_t d, int32_t acc)
 {
-    int layers = p->where == W_LAYER && syn.patch.voice_mode != SX_VM_SINGLE ? 2 : 1, k;
+    int layers = p->where == W_LAYER && syn.patch.voice_mode != SC_VM_SINGLE ? 2 : 1, k;
     for (k = 0; k < layers; k++) {
         if (p->kind == K_ENUM) {
             int8_t *f = field8(k, p);
@@ -293,14 +293,14 @@ static int32_t note_ms;                         /* when a note last started or s
 static void note_on(uint32_t note, uint32_t vel)
 {
     if (note > 127u || !vel) return;
-    sx_post(&syn, SX_EV_NOTE_ON, (uint8_t)note, (int32_t)(vel * 516u));   /* 516 = 65536 / 127 */
+    sc_post(&syn, SC_EV_NOTE_ON, (uint8_t)note, (int32_t)(vel * 516u));   /* 516 = 65536 / 127 */
     if (sounding[note] < 255u) sounding[note]++;
     note_ms = (int32_t)fm1_ms;
 }
 static void note_off(uint32_t note)
 {
     if (note > 127u) return;
-    sx_post(&syn, SX_EV_NOTE_OFF, (uint8_t)note, 0);
+    sc_post(&syn, SC_EV_NOTE_OFF, (uint8_t)note, 0);
     sounding[note] = 0;
     note_ms = (int32_t)fm1_ms;
 }
@@ -308,22 +308,22 @@ static int quiet(void)                          /* nothing sounds, not even a re
 {
     int k, i;
     for (k = 0; k < 2; k++)
-        for (i = 0; i < SX_VOICES; i++)
-            if (!sx_voice_idle(&syn.layer[k].v[i])) return 0;
+        for (i = 0; i < SC_VOICES; i++)
+            if (!sc_voice_idle(&syn.layer[k].v[i])) return 0;
     return 1;
 }
 
-static sx_perf_t perf;                          /* the joystick section: not in the patch, kept across sounds */
+static sc_perf_t perf;                          /* the joystick section: not in the patch, kept across sounds */
 
 static void load(uint32_t i)                    /* a preset in, whole, between two audio blocks */
 {
     uint32_t n;
     while (load_req) platform_poll();
-    staged = SX_PRESETS[i % SX_N_PRESETS];
+    staged = SC_PRESETS[i % SC_N_PRESETS];
     load_req = 1;
     while (load_req) platform_poll();           /* within one block, 5.8 ms */
     syn.perf = perf;                            /* (32-bit fields, then the event) */
-    sx_post(&syn, SX_EV_PATCH, 0, 0);
+    sc_post(&syn, SC_EV_PATCH, 0, 0);
     for (n = 0; n < 128u; n++) sounding[n] = 0;
 }
 
@@ -345,7 +345,7 @@ static int black(uint32_t note) { return (0x54Au >> (note % 12u)) & 1u; }
 static void draw_head(uint32_t preset, int edited, uint32_t cpu)
 {
     char s[24], t[12];
-    uint32_t a = SX_PRESET_ADDR[preset];
+    uint32_t a = SC_PRESET_ADDR[preset];
     cv_begin(240, 20, C_BLACK);
     str_cpy(s, a >= 100u ? "MEM " : "PRE ", 8);
     fmt_int(s + 4, (int32_t)(a % 100u));
@@ -363,8 +363,8 @@ static void draw_name(uint32_t preset)
 {
     char s[32];
     uint32_t i;
-    for (i = 0; i < 31u && SX_PRESETS[preset].name[i]; i++) {   /* FONT_L has capitals only */
-        char c = SX_PRESETS[preset].name[i];
+    for (i = 0; i < 31u && SC_PRESETS[preset].name[i]; i++) {   /* FONT_L has capitals only */
+        char c = SC_PRESETS[preset].name[i];
         s[i] = c >= 'a' && c <= 'z' ? (char)(c - 32) : c;
     }
     s[i] = 0;
@@ -372,7 +372,7 @@ static void draw_name(uint32_t preset)
     if (text_w(&FONT_L, s) <= 236)
         draw_text_box(0, Y_NAME, 240, &FONT_L, s, C_WHITE, 1);
     else
-        draw_text_box(0, Y_NAME + 8, 240, &FONT_S, SX_PRESETS[preset].name, C_WHITE, 1);
+        draw_text_box(0, Y_NAME + 8, 240, &FONT_S, SC_PRESETS[preset].name, C_WHITE, 1);
 }
 
 static void draw_page(uint32_t page)
@@ -447,10 +447,10 @@ static void app_main(void)
     uint8_t held[27] = {0};                     /* the note each key started */
 
     settings_load(&set, sizeof set);
-    if (set.preset >= SX_N_PRESETS) set.preset = 0;
+    if (set.preset >= SC_N_PRESETS) set.preset = 0;
     if (set.page >= N_PAGES) set.page = 0;
     if (set.oct < -2 || set.oct > 2) set.oct = 0;
-    sx_perf_default(&perf);
+    sc_perf_default(&perf);
     load(set.preset);
 
     lcd_fill(0, 0, 240, 240, C_BLACK);
@@ -486,7 +486,7 @@ static void app_main(void)
             }
 
         if ((d = fm1_enc_take(ENC_PRESETS)) != 0) {
-            set.preset = (uint8_t)(((int32_t)set.preset + d % SX_N_PRESETS + SX_N_PRESETS) % SX_N_PRESETS);
+            set.preset = (uint8_t)(((int32_t)set.preset + d % SC_N_PRESETS + SC_N_PRESETS) % SC_N_PRESETS);
             load(set.preset);
             edited = 0;
             dirty = 1; t_change = fm1_ms;
@@ -513,8 +513,8 @@ static void app_main(void)
             uint32_t ty = st & 0xF0u;
             if (ty == 0x90u && d2) note_on(d1, d2);
             else if (ty == 0x80u || ty == 0x90u) note_off(d1);
-            else if (ty == 0xE0u) sx_post(&syn, SX_EV_BEND, 0, ((int32_t)(d1 | d2 << 7) - 8192) * 16);   /* +-2 st, Q16 */
-            else if (ty == 0xC0u) { set.preset = (uint8_t)(d1 % SX_N_PRESETS); load(set.preset); edited = 0; dirty = 1; t_change = fm1_ms; }
+            else if (ty == 0xE0u) sc_post(&syn, SC_EV_BEND, 0, ((int32_t)(d1 | d2 << 7) - 8192) * 16);   /* +-2 st, Q16 */
+            else if (ty == 0xC0u) { set.preset = (uint8_t)(d1 % SC_N_PRESETS); load(set.preset); edited = 0; dirty = 1; t_change = fm1_ms; }
             else if (ty == 0xB0u && d1 == 1u) {                  /* the mod wheel: the stick pushed left */
                 perf.joy_x = syn.perf.joy_x = -(int32_t)(d2 * 516u);
                 patch_dirty = 1;
@@ -529,11 +529,11 @@ static void app_main(void)
                 edited = 1;
                 patch_dirty = 1;
             } else if (ty == 0xB0u && (d1 == 120u || d1 == 123u)) {
-                sx_post(&syn, SX_EV_ALL_OFF, 0, 0);
+                sc_post(&syn, SC_EV_ALL_OFF, 0, 0);
                 for (k = 0; k < 128u; k++) sounding[k] = 0;
             }
         }
-        if (patch_dirty) { sx_post(&syn, SX_EV_PATCH, 0, 0); patch_dirty = 0; }
+        if (patch_dirty) { sc_post(&syn, SC_EV_PATCH, 0, 0); patch_dirty = 0; }
 
         base = (uint32_t)(KEY0 + 12 * set.oct);
         for (k = 0; k < 27u; k++)               /* what sounds, on the keys of this octave */

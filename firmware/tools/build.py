@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
 # Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments
-"""Build Synthex for the FM-1 (Dinghy, on Felucca / SLOOP's platform): the app, the update loader and an
+"""Build Scintilla for the FM-1 (Dinghy, on Felucca / SLOOP's platform): the app, the update loader and an
 installable .fwsc package.
 
   tools/build.py [--release X.Y[-suffix]]
 
-Outputs in build/: synthex.bin (app), loader/ota.bin (update loader),
-synthex.fwsc (package). See README.md for the toolchain and the SDK.
+Outputs in build/: scintilla.bin (app), loader/ota.bin (update loader),
+scintilla.fwsc (package). See README.md for the toolchain and the SDK.
 
 The engine (../engine, outside this tree) is copied into build/engine first: on macOS the toolchain runs
 in a container that sees only this directory. It is compiled -O2 on its own (the app and the platform -Os).
@@ -52,7 +52,7 @@ SDK_SHA256 = {
     "cfg/eq_cfg_hw.bin": "41167491bffed4651750719c973d2758adeb9021a5670d02d6a53c85ed80ea7d",
 }
 
-PRODUCT = "FM-1_960"                # Synthex: 96N (Dinghy is 99N, fm1-harbor 95N; the installer wants FM-1_9NN)
+PRODUCT = "FM-1_960"                # Scintilla: 96N (Dinghy is 99N, fm1-harbor 95N; the installer wants FM-1_9NN)
 VERSION = None                      # APP_VER for release builds
 
 
@@ -155,13 +155,13 @@ def build_loader():
 
 # ---- app
 
-ENGINE_C = ("sx_voice.c", "sx_synth.c")
+ENGINE_C = ("sc_voice.c", "sc_synth.c")
 
 
 def copy_engine():
     dst = OUT / "engine"
     dst.mkdir(parents=True, exist_ok=True)
-    for f in [*ENGINE.glob("sx_*.h"), *(ENGINE / c for c in ENGINE_C)]:
+    for f in [*ENGINE.glob("sc_*.h"), *(ENGINE / c for c in ENGINE_C)]:
         if not (dst / f.name).exists() or (dst / f.name).read_bytes() != f.read_bytes():
             shutil.copyfile(f, dst / f.name)
 
@@ -174,12 +174,12 @@ def build_app():
     cmds = [("cc", "-c", FW / "crt0.S", "-o", OUT / "crt0.o"),
             ("cc", "-c", FW / "hal" / "fm1_vec.S", "-o", OUT / "fm1_vec.o"),
             ("cc", "-c", FW / "hal" / "fm1_isr.S", "-o", OUT / "fm1_isr.o"),
-            ("cc", *flags, "-c", FW / "src" / "synthex.c", "-o", OUT / "synthex.o"),
+            ("cc", *flags, "-c", FW / "src" / "scintilla.c", "-o", OUT / "scintilla.o"),
             *(("cc", *eflags, "-c", OUT / "engine" / c, "-o", OUT / c.replace(".c", ".o")) for c in ENGINE_C)]
     tc_all(*cmds)
-    elf = OUT / "synthex.elf"
+    elf = OUT / "scintilla.elf"
     tc("pi32v2/bin/ld", "--gc-sections", "-e", "_start", "-T", FW / "app.ld", OUT / "crt0.o", OUT / "fm1_vec.o",
-       OUT / "fm1_isr.o", OUT / "synthex.o", *(OUT / c.replace(".c", ".o") for c in ENGINE_C), "-o", elf)
+       OUT / "fm1_isr.o", OUT / "scintilla.o", *(OUT / c.replace(".c", ".o") for c in ENGINE_C), "-o", elf)
     for sect in ("text.bin", "data.bin", "ramtext.bin"):
         (OUT / sect).unlink(missing_ok=True)
     *_, syms, dis, rt = tc_all(("common/bin/objcopy", "-O", "binary", "-j", ".text", elf, OUT / "text.bin"),
@@ -188,8 +188,8 @@ def build_app():
                                ("common/bin/objdump", "-t", elf),
                                ("common/bin/objdump", "-d", elf),
                                ("common/bin/objdump", "-d", "-j", ".ram_text", elf))
-    (OUT / "synthex.dis").write_text(dis)
-    (OUT / "synthex.syms").write_text(syms)       # (tests/emu_test.py reads the app's state by name)
+    (OUT / "scintilla.dis").write_text(dis)
+    (OUT / "scintilla.syms").write_text(syms)       # (tests/emu_test.py reads the app's state by name)
 
     def symv(name):
         return int(re.search(r"^([0-9a-f]+) .*\s" + name + r"$", syms, re.M).group(1), 16)
@@ -206,7 +206,7 @@ def build_app():
             img += b"\xff" * (load - APP_XIP - len(img))
             img += blob
     img += b"\xff" * (-len(img) % 4)
-    (OUT / "synthex.bin").write_bytes(img)
+    (OUT / "scintilla.bin").write_bytes(img)
     return bytes(img), syms, dis, rt
 
 
@@ -294,14 +294,14 @@ def main():
     ap.add_argument("--release", metavar="X.Y", help="release build: identity FM-1_9XY, version string X.Y")
     ap.add_argument("--sdk", type=Path, help="JieLi AC79 SDK checkout (default: $AC79_SDK)")
     a = ap.parse_args()
-    name = "synthex.fwsc"
+    name = "scintilla.fwsc"
     if a.release:                   # one digit each: the identity has room for two (X.Y; a .Z only in the text)
         m = re.fullmatch(r"(\d)\.(\d)(\.\d)?(-[A-Za-z0-9]+)?", a.release)
         if not m:
             raise SystemExit(f"--release {a.release}: use X.Y, X.Y.Z or X.Y-suffix, one digit each")
         PRODUCT = "FM-1_96" + m[2]
         VERSION = m[1] + "." + m[2] + (m[3] or "")
-        name = f"synthex-{a.release}.fwsc"
+        name = f"scintilla-{a.release}.fwsc"
     fm1pkg_make.SDK = a.sdk
     for rel, sha in SDK_SHA256.items():          # fail early without the SDK
         if hashlib.sha256(fm1pkg_make.sdk_file(rel)).hexdigest() != sha:
@@ -322,7 +322,7 @@ def main():
         raise SystemExit("build: checks failed")
     pkg = fm1pkg_make.ufw(fm1pkg_make.flash_image(img, fm1pkg_make.KEY), ota, PRODUCT)
     (OUT / name).write_bytes(pkg)
-    print(f"app      {OUT / 'synthex.bin'}  {len(img)} B")
+    print(f"app      {OUT / 'scintilla.bin'}  {len(img)} B")
     print(f"loader   {LDR / 'ota.bin'}  {len(ota)} B")
     print(f"package  {OUT / name}  {len(pkg)} B, identity {PRODUCT}")
     return 0

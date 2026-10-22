@@ -5,7 +5,7 @@
     tools/song_h.py OUT.h PRESET:SCENARIO [PRESET:SCENARIO ...]
 
 Each part plays one scenario (tools/scenario.mjs's format) on one preset, the parts one after
-another. Events go to the block that host/sx_render.c's synth mode would post them in: the first
+another. Events go to the block that host/sc_render.c's synth mode would post them in: the first
 256-frame block whose end is past the event's time."""
 import math, sys
 
@@ -47,7 +47,7 @@ def main():
             while not t * FS < i + min(BLOCK, frames - i):
                 i += BLOCK
             events.append(f"    {{ {i // BLOCK}, {on}, {note}, {q16(vel)} }},")
-        j = [q16(x) for x in joy] if joy else [0, 0]                 # sx_perf_default's SX_Q16s
+        j = [q16(x) for x in joy] if joy else [0, 0]                 # sc_perf_default's SC_Q16s
         pf = [q16(x) for x in perf] if perf else [int(0.3 * 65536)] * 2 + [int(0.5 * 65536)] * 2
         rows.append(f"    {{ {int(preset)}, {frames}, {first}, {len(events) - first}, "
                     f"{{ {j[0]}, {j[1]}, {', '.join(map(str, pf))} }} }},  /* {path} */")

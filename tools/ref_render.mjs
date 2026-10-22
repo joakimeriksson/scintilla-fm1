@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // The reference: render a scenario through synthex-web's own VoiceCore (via its offline renderer,
-// tools/compare/render.ts) at 44.1 kHz, as raw float32 mono. host/sx_render.c renders the same
+// tools/compare/render.ts) at 44.1 kHz, as raw float32 mono. host/sc_render.c renders the same
 // scenario through the C port; tools/compare.py scores the pair.
 //
 //   node --experimental-transform-types tools/ref_render.mjs PRESET SCENARIO OUT.f32 [--nudge]
@@ -13,16 +13,16 @@
 //
 // The loop is render.ts's (events on the first sample at or after their time, runs between them)
 // with runs cut at 128 samples as the AudioWorklet runs it, written out here so the nudge can reach
-// VoiceCore. host/sx_render.c cuts its runs the same way.
+// VoiceCore. host/sc_render.c cuts its runs the same way.
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { SYNTHEX, factory } from './gen_presets.mjs'
+import { SYNTHEX_WEB, factory } from './gen_presets.mjs'
 import { parseScenario } from './scenario.mjs'
 
 const args = process.argv.slice(2).filter((a) => !a.startsWith('--'))
 const nudge = process.argv.includes('--nudge') ? 5e-5 : 0
 const [idx, scenFile, outFile] = args
-const { VoiceCore } = await import(join(SYNTHEX, 'packages/engine/src/dsp/voice-core.ts'))
+const { VoiceCore } = await import(join(SYNTHEX_WEB, 'packages/engine/src/dsp/voice-core.ts'))
 const bank = await factory()
 const sc = parseScenario(readFileSync(scenFile, 'utf8'))
 

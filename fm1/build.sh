@@ -18,10 +18,10 @@ CC="/opt/jieli/pi32v2/bin/clang -target pi32v2"
 CF="$OPT -ffreestanding -nostdlib -fno-builtin -Wall -Wno-unused-function"
 O=build/fm1
 \$CC -c fm1/crt0.S -o \$O/crt0.o
-\$CC \$CF -c engine/sx_voice.c -o \$O/sx_voice.o
-\$CC \$CF -c engine/sx_synth.c -o \$O/sx_synth.o
+\$CC \$CF -c engine/sc_voice.c -o \$O/sc_voice.o
+\$CC \$CF -c engine/sc_synth.c -o \$O/sc_synth.o
 \$CC \$CF -c fm1/bench.c -o \$O/bench.o
-/opt/jieli/pi32v2/bin/ld -T fm1/bench.ld -e _start \$O/crt0.o \$O/bench.o \$O/sx_synth.o \$O/sx_voice.o -o \$O/bench.elf
+/opt/jieli/pi32v2/bin/ld -T fm1/bench.ld -e _start \$O/crt0.o \$O/bench.o \$O/sc_synth.o \$O/sc_voice.o -o \$O/bench.elf
 /opt/jieli/common/bin/objcopy -O binary -j .text \$O/bench.elf \$O/text.bin
 /opt/jieli/common/bin/objcopy -O binary -j .data \$O/bench.elf \$O/data.bin
 /opt/jieli/common/bin/objdump -d \$O/bench.elf > \$O/bench.dis
@@ -31,7 +31,7 @@ O=build/fm1
 /opt/jieli/common/bin/objcopy -O binary -j .data \$O/prim.elf \$O/pdata.bin
 if [ -f \$O/song_ev.h ]; then
 \$CC \$CF -c fm1/play.c -o \$O/play.o
-/opt/jieli/pi32v2/bin/ld -T fm1/bench.ld -e _start \$O/crt0.o \$O/play.o \$O/sx_synth.o \$O/sx_voice.o -o \$O/play.elf
+/opt/jieli/pi32v2/bin/ld -T fm1/bench.ld -e _start \$O/crt0.o \$O/play.o \$O/sc_synth.o \$O/sc_voice.o -o \$O/play.elf
 /opt/jieli/common/bin/objcopy -O binary -j .text \$O/play.elf \$O/pltext.bin
 /opt/jieli/common/bin/objcopy -O binary -j .data \$O/play.elf \$O/pldata.bin
 fi

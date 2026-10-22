@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// The scenario format both renderers read (host/sx_render.c parses the same lines):
+// The scenario format both renderers read (host/sc_render.c parses the same lines):
 //   dur SECONDS
 //   on  T NOTE VELOCITY(0..1)
 //   off T NOTE

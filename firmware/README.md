@@ -39,10 +39,10 @@ your own sounds, the arpeggiator and sequencer.
 ## Build, run, test
 
 ```sh
-./build.sh                         # -> build/synthex.fwsc (fails on what would brick the FM-1)
+./build.sh                         # -> build/scintilla.fwsc (fails on what would brick the FM-1)
 tests/emu_test.py                  # on the emulated FM-1: the sound, the engine, presets, knobs, MIDI, the CPU
 tests/emu.py --keys "1000:21,1000:25,1000:28" --ms 3000    # any script -> build/emu/run/audio.wav, panel.png
-tests/run_host.sh                  # synthex.c on this computer: build/host/synthex.wav, screens
+tests/run_host.sh                  # scintilla.c on this computer: build/host/scintilla.wav, screens
 ```
 
 `build.sh` needs the JieLi toolchain, the JieLi AC79 SDK and Pillow, as [Dinghy's README](https://github.com/zvenson/dinghy#2-set-up-once)
@@ -63,14 +63,14 @@ What `tests/emu_test.py` checks, on fm1-emu's emulated FM-1 (fm1-live, headless)
 ## How it is made
 
 ```
-firmware/src/synthex.c    <- the app: the panel, the pages, MIDI, the screen; app_audio() runs the engine
+firmware/src/scintilla.c    <- the app: the panel, the pages, MIDI, the screen; app_audio() runs the engine
 ../engine/                <- the engine (copied into build/engine by tools/build.py, compiled -O2)
 firmware/src/platform.c   <- Dinghy's platform (boot, USB, updates, the audio ISR, settings), plus one hook
 firmware/src/*.c, hal/    <- Felucca's platform, as SLOOP carries it
 ```
 
-The audio interrupt calls `sx_render()` for 256 frames. The main loop talks to it through the engine's event queue
-(`sx_post`: notes, bend, "the patch changed") and through patch fields written whole; a new preset is copied into a
+The audio interrupt calls `sc_render()` for 256 frames. The main loop talks to it through the engine's event queue
+(`sc_post`: notes, bend, "the patch changed") and through patch fields written whole; a new preset is copied into a
 staging patch and taken in by the interrupt between two blocks, so a half-written sound is never played.
 
 Changes to Dinghy's own files: `platform.c` calls `APP_EARLY_INIT` before the key scan starts (the DIN jack's UART,

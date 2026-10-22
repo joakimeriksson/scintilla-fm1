@@ -5,7 +5,7 @@
     demo/ad/fit/fit.py [REF.wav] [--rounds 3]
 
 REF defaults to synthex-web's tools/compare/refs/patch-laser-harp.wav: D3 held ~9.9 s in Elka-X
-(chorus mode 1), the capture the web Synthex was fitted to. Each candidate is one note rendered by
+(chorus mode 1), the capture synthex-web's Synthex was fitted to. Each candidate is one note rendered by
 demo/ad/fit/one_note.c (the FM-1 engine, on this computer - bit-identical to the FM-1). The score
 is the mean |dB| difference over 1/3-octave bands 63 Hz - 16 kHz in three windows (attack 0-0.4 s,
 glide 0.4-1.5 s, sustain 1.5-9.5 s), level included. Coordinate descent over the fields below."""
@@ -63,7 +63,7 @@ def main():
     rounds = int(args.pop(args.index("--rounds") + 1)) if "--rounds" in args else 3
     if "--rounds" in args: args.remove("--rounds")
     ref = load(Path(args[0]) if args and "=" not in args[0] and args[0] != "--from" else REF)
-    subprocess.run([*cc(), "-O2", "-o", str(EXE), "demo/ad/fit/one_note.c", "engine/sx_voice.c", "engine/sx_synth.c"],
+    subprocess.run([*cc(), "-O2", "-o", str(EXE), "demo/ad/fit/one_note.c", "engine/sc_voice.c", "engine/sc_synth.c"],
                    cwd=ROOT, check=True)
     R = bands(ref)
     with tempfile.TemporaryDirectory() as wd:

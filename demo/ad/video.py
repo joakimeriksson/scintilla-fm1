@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
-"""The Scintilla commercial (synthex-web's Synthex on the FM-1) as a video: the real firmware playing a score in fm1-emu's fm1-live.
+"""The Scintilla commercial as a video: the real firmware playing a score in fm1-emu's fm1-live.
 
     demo/ad/video.py [--fps-panel 10] [--jobs 8]
       -> build/ad/video/scintilla-short.mp4   1080x1920 (YouTube Shorts, X)
@@ -18,7 +18,7 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 ROOT = Path(__file__).resolve().parents[2]
-FWSC = ROOT / "firmware/build/synthex.fwsc"
+FWSC = ROOT / "firmware/build/scintilla.fwsc"
 LIVE = Path(os.environ.get("FM1_LIVE", Path.home() / "work/fm1-emu/target/release/fm1-live"))
 OUT = ROOT / "build/ad/video"
 FS, FPS = 44100, 30

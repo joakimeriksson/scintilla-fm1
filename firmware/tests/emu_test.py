@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-3.0-only
-"""Synthex on the emulated FM-1, end to end (fm1-emu's fm1-live, headless):
+"""Scintilla on the emulated FM-1, end to end (fm1-emu's fm1-live, headless):
     ./build.sh && tests/emu_test.py
-Each case boots build/synthex.fwsc with a key / encoder / MIDI script (tests/emu.py) and checks the
-sound, and the firmware's own state in a RAM dump at the end (by symbol, from build/synthex.syms).
+Each case boots build/scintilla.fwsc with a key / encoder / MIDI script (tests/emu.py) and checks the
+sound, and the firmware's own state in a RAM dump at the end (by symbol, from build/scintilla.syms).
 FM1_LIVE: fm1-live (default ~/work/fm1-emu/target/release/fm1-live); fm1-emu is next to it."""
 import os, re, struct, subprocess, sys, tempfile
 from pathlib import Path
@@ -17,7 +17,7 @@ OUT = SRC / "build" / "emu"
 RAM_BASE = 0x01C00000
 FS = 44100
 failures = []
-# sx_patch_t has int8 and int32 fields only, so its layout is the same here and on the FM-1
+# sc_patch_t has int8 and int32 fields only, so its layout is the same here and on the FM-1
 PATCH_NAME, LAYER0, CUTOFF = 0, 28, None
 
 
@@ -39,15 +39,15 @@ def cc():
 
 
 def sym(name):
-    m = re.search(r"^([0-9a-f]{8}) .*\s" + re.escape(name) + r"$", (SRC / "build" / "synthex.syms").read_text(), re.M)
+    m = re.search(r"^([0-9a-f]{8}) .*\s" + re.escape(name) + r"$", (SRC / "build" / "scintilla.syms").read_text(), re.M)
     return int(m.group(1), 16) - RAM_BASE
 
 
 def patch_offsets():
-    """offsets in sx_patch_t, by the host's compiler (the same layout as the FM-1's: see above)"""
+    """offsets in sc_patch_t, by the host's compiler (the same layout as the FM-1's: see above)"""
     c = SRC / "build" / "offsets.c"
-    c.write_text('#include <stdio.h>\n#include <stddef.h>\n#include "sx_patch.h"\nint main(void){printf("%zu %zu\\n",'
-                 ' offsetof(sx_patch_t, layer[0].cutoff), sizeof(sx_patch_t));}\n')
+    c.write_text('#include <stdio.h>\n#include <stddef.h>\n#include "sc_patch.h"\nint main(void){printf("%zu %zu\\n",'
+                 ' offsetof(sc_patch_t, layer[0].cutoff), sizeof(sc_patch_t));}\n')
     exe = SRC / "build" / "offsets"
     subprocess.run([*cc(), "-I", str(SRC.parent / "engine"), "-o", str(exe), str(c)], check=True)
     return [int(x) for x in subprocess.run([str(exe)], capture_output=True, text=True).stdout.split()]
@@ -57,7 +57,7 @@ def engine_ref():
     exe = SRC / "build" / "engine_ref"
     e = SRC.parent / "engine"
     subprocess.run([*cc(), "-O2", "-I", str(e), "-o", str(exe), str(SRC / "tests" / "engine_ref.c"),
-                    str(e / "sx_voice.c"), str(e / "sx_synth.c")], check=True)
+                    str(e / "sc_voice.c"), str(e / "sc_synth.c")], check=True)
     return exe
 
 
@@ -86,7 +86,7 @@ def decode_check():
     cannot run fails here, not mid-test"""
     fe = emu.LIVE.with_name("fm1-emu")
     line = re.compile(r"^\s*([0-9a-f]+):\s+((?:[0-9a-f]{2} )+)\s*\t(.*)$")
-    rows = [(m.group(2).split(), m.group(3).strip()) for m in map(line.match, (SRC / "build" / "synthex.dis").read_text().splitlines())
+    rows = [(m.group(2).split(), m.group(3).strip()) for m in map(line.match, (SRC / "build" / "scintilla.dis").read_text().splitlines())
             if m and not m.group(3).startswith("<")]
     text = "\n".join("".join(b + (rows[i + 1][0] if i + 1 < len(rows) else ["00", "00"])) for i, (b, _) in enumerate(rows))
     with tempfile.NamedTemporaryFile("w", suffix=".txt") as f:

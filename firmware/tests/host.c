@@ -1,12 +1,12 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* A fake FM-1 on a computer: the app (firmware/src/synthex.c) runs unchanged on it. platform.c includes
+/* A fake FM-1 on a computer: the app (firmware/src/scintilla.c) runs unchanged on it. platform.c includes
  * this file instead of the hardware when DINGHY_HOST is set. A script presses keys over time; out come
  * the screen (PPM, at the times SHOT asks) and the sound (WAV, as the FM-1 sends it over USB).
  *
  *   mkdir -p build/host
  *   tests/run_host.sh                         (builds it with the engine, ../engine)
- *   build/host/synthex build/host/synthex      (-> build/host/synthex.wav, build/host/synthex-<ms>.ppm)
- *   build/host/synthex OUT script.txt [FPS]    (your own script; with FPS: OUT-NNNNN.ppm, a frame every 1/FPS s:
+ *   build/host/scintilla build/host/scintilla      (-> build/host/scintilla.wav, build/host/scintilla-<ms>.ppm)
+ *   build/host/scintilla OUT script.txt [FPS]    (your own script; with FPS: OUT-NNNNN.ppm, a frame every 1/FPS s:
  *                                             a film of your firmware, e.g. ffmpeg -r 30 -i OUT-%05d.ppm ...)
  *
  * Change SCRIPT below to try your own app. */
@@ -135,7 +135,7 @@ static void read_script(const char *path)
     script_n = n;
 }
 
-static const char *host_out = "build/host/synthex";
+static const char *host_out = "build/host/scintilla";
 static int16_t *wav;
 static uint32_t wav_n;
 

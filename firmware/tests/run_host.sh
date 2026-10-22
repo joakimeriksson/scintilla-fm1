@@ -1,17 +1,17 @@
 #!/bin/sh
 # SPDX-License-Identifier: GPL-3.0-only
-# Run firmware/src/synthex.c on this computer (tests/host.c): build/host/synthex.wav and the screens as PNG.
+# Run firmware/src/scintilla.c on this computer (tests/host.c): build/host/scintilla.wav and the screens as PNG.
 set -e
 cd "$(dirname "$0")/.."
 mkdir -p build/host
 E=../engine
 cc -O2 -Wall -Wno-unused-function -DDINGHY_HOST -DAPP_VER="\"${APP_VER:-dev}\"" -Ifirmware/src -Ifirmware/gen -I$E \
-    -o build/host/synthex firmware/src/synthex.c $E/sx_voice.c $E/sx_synth.c
-build/host/synthex build/host/synthex
+    -o build/host/scintilla firmware/src/scintilla.c $E/sc_voice.c $E/sc_synth.c
+build/host/scintilla build/host/scintilla
 python3 - <<'PY'
 from pathlib import Path
 from PIL import Image
-for p in sorted(Path("build/host").glob("synthex-*.ppm")):
+for p in sorted(Path("build/host").glob("scintilla-*.ppm")):
     Image.open(p).resize((480, 480), Image.NEAREST).save(p.with_suffix(".png"))
     p.unlink()
     print("screen ->", p.with_suffix(".png"))

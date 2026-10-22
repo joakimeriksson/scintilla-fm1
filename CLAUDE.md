@@ -1,12 +1,12 @@
-# Scintilla (Synthex FM-1) — notes for working on it
+# Scintilla — notes for working on it
 
-The synthex-web Synthex (`~/work/ai-smarthome/audio/software-synth/synthex`) ported to integer C for the M-VAVE
+synthex-web's Synthex (`~/work/ai-smarthome/audio/software-synth/synthex`) ported to integer C for the M-VAVE
 FM-1. Read README.md first; this file is what the code does not say.
 
 ## The one rule
 
 **synthex-web's `VoiceCore` is the reference** (`packages/engine/src/dsp/voice-core.ts`). Every change to
-`engine/sx_voice.c` is checked by `tests/run.sh` against it, preset by preset, and must stay inside the limits
+`engine/sc_voice.c` is checked by `tests/run.sh` against it, preset by preset, and must stay inside the limits
 in `tools/score_all.py`. When the C engine and VoiceCore disagree, the C engine is wrong until shown otherwise.
 Do not widen a limit to make a change pass; find out what moved.
 
@@ -69,8 +69,8 @@ the host build's. A mismatch is a bug (in the engine, the compiler or the emulat
   `tests/emu_test.py` fails when fm1-live or fm1-emu is older than the fm1-emu checkout's last commit; rebuild
   with `cargo build --release -p fm1-live -p fm1-emu` (only `target/` changes).
 - `tests/emu.py`'s `ms:mHEX` MIDI goes into the DIN jack (fm1-live has no scripted USB-MIDI): the firmware reads
-  both. The `pi32v2` lays out int64 fields differently from the Mac, so read `sx_synth_t` from a RAM dump only
-  through `sx_patch_t` (int8 / int32 only, the same layout) or by symbol.
+  both. The `pi32v2` lays out int64 fields differently from the Mac, so read `sc_synth_t` from a RAM dump only
+  through `sc_patch_t` (int8 / int32 only, the same layout) or by symbol.
 - fm1-emu's `--ram` must stay at or under 4 MiB: RAM starts at 0x01C00000, so more covers the code at
   0x02000000, the CPU fetches zeros, and the run "halts on a nop slide" after a few thousand steps.
 - A Rosetta python (x86-64 conda) cannot start Apple's `cc` shim: `fm1/run.py` uses `arch -arm64 cc` then.
@@ -85,14 +85,14 @@ the host build's. A mismatch is a bug (in the engine, the compiler or the emulat
 ## Layout
 
 ```
-engine/       the synth (no float, no 64-bit division, no libc): sx_patch.h sx_fixed.h sx_voice.* sx_synth.*
-              sx_tables.h (generated) sx_presets.h (generated)
-host/         sx_render.c: scenarios on this computer
+engine/       the synth (no float, no 64-bit division, no libc): sc_patch.h sc_fixed.h sc_voice.* sc_synth.*
+              sc_tables.h (generated) sc_presets.h (generated)
+host/         sc_render.c: scenarios on this computer
 tools/        gen_tables.py gen_presets.mjs ref_render.mjs scenario.mjs compare.py score_all.py profile.py
               reverb_ir.mjs reverb_check.py (the reverb against the app's impulses)
 tests/        run.sh, scenarios/*.txt
 fm1/          the bench for fm1-emu: bench.c workload.h host_bench.c build.sh run.py, prim.h, trace.c;
               listen.py plays song.h (play.c / host_play.c, events from tools/song_h.py) into a WAV
-firmware/     the firmware: Dinghy 0.3 (exported from upstream, GPL) + firmware/src/synthex.c; ./build.sh,
+firmware/     the firmware: Dinghy 0.3 (exported from upstream, GPL) + firmware/src/scintilla.c; ./build.sh,
               tests/emu_test.py (fm1-live), tests/run_host.sh. Its README says what changed in Dinghy's files
 ```

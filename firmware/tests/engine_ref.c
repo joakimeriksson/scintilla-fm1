@@ -6,20 +6,20 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "sx_synth.h"
-#include "sx_presets.h"
-static sx_synth_t s;
+#include "sc_synth.h"
+#include "sc_presets.h"
+static sc_synth_t s;
 int main(int argc, char **argv)
 {
     int K = atoi(argv[1]), N = atoi(argv[2]), note = argc > 3 ? atoi(argv[3]) : 60, preset = argc > 4 ? atoi(argv[4]) : 0;
     int32_t blk[512]; int16_t pcm[512];
-    sx_init(&s, &SX_PRESETS[preset]);
-    sx_perf_default(&s.perf);
-    sx_reprep(&s);                               /* the firmware's SX_EV_PATCH after the load */
+    sc_init(&s, &SC_PRESETS[preset]);
+    sc_perf_default(&s.perf);
+    sc_reprep(&s);                               /* the firmware's SC_EV_PATCH after the load */
     for (int b = 0; b < K + N; b++) {
-        if (b == K) sx_post(&s, SX_EV_NOTE_ON, (uint8_t)note, 100 * 516);
+        if (b == K) sc_post(&s, SC_EV_NOTE_ON, (uint8_t)note, 100 * 516);
         memset(blk, 0, sizeof blk);
-        sx_render(&s, blk, 256);
+        sc_render(&s, blk, 256);
         if (b >= K) { for (int i = 0; i < 512; i++) pcm[i] = (int16_t)blk[i]; fwrite(pcm, 2, 512, stdout); }
     }
     return 0;
