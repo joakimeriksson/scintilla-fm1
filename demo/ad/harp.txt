@@ -1,0 +1,11 @@
+# the laser harp, alone: one beam at a time, each struck and let go, sliding down into pitch
+# (the preset's 8-semitone glide on OSC2). An original phrase in D minor.
+dur 7.0
+on 0.00 57 1.0
+off 0.85 57
+on 1.15 62 1.0
+off 2.00 62
+on 2.30 65 1.0
+off 3.15 65
+on 3.45 64 1.0
+off 5.20 64

@@ -1,0 +1,8 @@
+# the commercial's opening: Take-off rising out of nothing on a low D minor chord
+dur 5.0
+on 0.00 38 0.9
+on 0.00 45 0.8
+on 0.00 50 0.8
+off 3.60 38
+off 3.60 45
+off 3.60 50

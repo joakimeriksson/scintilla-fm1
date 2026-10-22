@@ -1,0 +1,16 @@
+# the laser-harp riff from the score, C = MIDI 60
+dur 8.0
+on 0.200 60 1.0
+off 2.055 60
+on 2.075 59 1.0
+off 2.211 59
+on 2.231 58 1.0
+off 2.524 58
+on 2.544 56 1.0
+off 4.555 56
+on 4.575 63 1.0
+off 4.711 63
+on 4.731 62 1.0
+off 5.024 62
+on 5.044 60 1.0
+off 7.055 60

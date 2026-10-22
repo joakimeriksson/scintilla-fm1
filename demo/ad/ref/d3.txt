@@ -1,0 +1,4 @@
+# the Elka-X reference capture's note: D3 held 9.9 s (tools/compare scenario patch-laser-harp)
+dur 15.0
+on 0.10 50 1.0
+off 10.00 50

@@ -1,0 +1,8 @@
+# the close: Landing falls away under the last beam's tail
+dur 6.0
+on 0.00 38 0.9
+on 0.00 50 0.8
+on 0.00 57 0.7
+off 3.00 38
+off 3.00 50
+off 3.00 57

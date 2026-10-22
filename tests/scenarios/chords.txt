@@ -1,0 +1,24 @@
+# the instrument, not one voice: a four-note chord, a second one over it, a melody on top
+dur 6.0
+on 0.0 48 0.9
+on 0.0 55 0.8
+on 0.0 60 0.8
+on 0.0 64 0.8
+off 2.0 48
+off 2.0 55
+off 2.0 60
+off 2.0 64
+on 2.0 45 0.9
+on 2.0 52 0.8
+on 2.0 57 0.8
+on 2.0 60 0.8
+on 2.5 72 1.0
+off 3.0 72
+on 3.0 76 0.9
+off 3.5 76
+on 3.5 79 1.0
+off 4.5 79
+off 4.6 45
+off 4.6 52
+off 4.6 57
+off 4.6 60
