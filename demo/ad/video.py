@@ -52,7 +52,9 @@ NOTES += [(O + 0.2, O + 0.55, [49, 53, 56, 61], 110),     # Db stab
           (O + 0.7, O + 1.05, [51, 55, 58, 63], 110),     # Eb stab
           (O + 1.2, O + 3.2, [53, 56, 60, 65, 72], 120)]  # Fm, held
 SECTIONS = [(0.0, "GLIDE STRINGS"), (8.8, "LASER HARP"), (O, "BRASS I")]
-END = round(O + 4.4, 2)
+END = round(O + 5.4, 2)
+CREDIT = O + 1.6                                    # the end card: who made it, where it is
+AUTHOR, REPO = "JOAKIM ERIKSSON", "github.com/joakimeriksson/scintilla-fm1"
 
 
 def keys():
@@ -115,6 +117,7 @@ class Frame:
     def draw(self, t, pan, audio):
         W, H = self.w, self.h
         im = Image.new("RGB", (W, H), (8, 8, 12))
+        card = max(0.0, min(1.0, (t - CREDIT) / 0.5))       # the end card fades in, the scope down
         y0, y1 = self.stage
         # the stage: laser beams in the harp part, a scope always
         glow = Image.new("RGB", (W, y1 - y0), (0, 0, 0))
@@ -143,7 +146,7 @@ class Frame:
             xs = np.linspace(W * 0.06, W * 0.94, len(seg))
             mid = (y1 - y0) * (0.5 if not (8.8 <= t < O) else 0.82)
             amp = (y1 - y0) * (0.36 if not (8.8 <= t < O) else 0.14)
-            g.line(list(zip(xs, mid - seg * amp)), fill=(255, 150, 60), width=4)
+            g.line(list(zip(xs, mid - seg * amp)), fill=tuple(int(c * (1 - 0.75 * card)) for c in (255, 150, 60)), width=4)
         im.paste(Image.blend(glow, glow.filter(ImageFilter.GaussianBlur(9)), 0.5), (0, y0))
         lit = glow.filter(ImageFilter.GaussianBlur(22))
         base = im.crop((0, y0, W, y1))
@@ -153,7 +156,11 @@ class Frame:
         sub = "the 1981 Elka Synthex, reborn on a M-VAVE FM-1"
         d.text((W / 2, self.title_y + (165 if self.big else 115)), sub, font=self.f_sub, fill=(150, 150, 160), anchor="mt")
         sec = [s for s0, s in SECTIONS if t >= s0][-1]
-        spaced(d, (W / 2, y1 - (80 if self.big else 58)), sec, self.f_sec, (255, 154, 60), 10)
+        spaced(d, (W / 2, y1 - (80 if self.big else 58)), sec, self.f_sec, tuple(int(c * (1 - card)) for c in (255, 154, 60)), 10)
+        if card > 0:
+            cy = (y0 + y1) / 2
+            spaced(d, (W / 2, cy - (90 if self.big else 62)), AUTHOR, self.f_sec, tuple(int(c * card) for c in (240, 240, 245)), 10)
+            d.text((W / 2, cy + (20 if self.big else 12)), REPO, font=self.f_sub, fill=tuple(int(c * card) for c in (255, 154, 60)), anchor="mt")
         p = pan.resize((W, round(pan.height * W / pan.width)), Image.Resampling.LANCZOS)
         im.paste(p, (0, self.panel_y))
         if self.foot_y:
