@@ -21,15 +21,19 @@
  * The preset, the octave and the page are kept in flash; edits to a sound are not (yet).
  * Rules of the road: integers only, no float, no 64-bit division (docs/RULES.md). */
 #define APP_NAME "SCINTILLA"
+#ifdef HB_MODULE                                /* a module of fm1-harbor (its modules/scintilla): its platform calls */
+#include "sc_harbor.h"
+#else
 #define APP_EARLY_INIT din_init                 /* the DIN jack's UART, before platform.c starts the key scan */
 static void din_init(void);
 #include "platform.c"
+#endif
 #include "sc_synth.h"
 #include "sc_presets.h"
 
 /* ---- MIDI from the DIN jack: UART1 DMAs into a ring filled with 0xFF (a byte MIDI never sends here:
  * it is a reset), read by content (hal/fm1_uart.h; as fm1-harbor). Channel messages only. */
-#ifndef DINGHY_HOST
+#if !defined(DINGHY_HOST) && !defined(HB_MODULE) /* (in harbor the DIN jack is the host's: midi()) */
 #include "fm1_uart.h"
 #define DIN_RING 256u
 static volatile uint8_t din_ring[DIN_RING] __attribute__((aligned(16)));
@@ -75,13 +79,14 @@ static int din_get(uint8_t *st, uint8_t *d1, uint8_t *d2) { (void)st; (void)d1; 
 #endif
 
 /* ---- the sound (the audio ISR) */
-#ifdef DINGHY_HOST                             /* (a Mach-O section needs "segment,section", as gfx.c's) */
+#if defined(DINGHY_HOST) || defined(HB_MODULE)  /* (a Mach-O section needs "segment,section", as gfx.c's) */
 static sc_synth_t syn;
 #else
 static sc_synth_t syn __attribute__((section(".pool")));   /* 80 KB with the reverb's lines: not in .bss's 96 */
 #endif
 static sc_patch_t staged;                       /* a preset on its way in: the main loop writes it, then load_req */
 static volatile uint32_t load_req, ready;       /* main -> ISR / ISR -> main */
+static sc_perf_t perf;                          /* the joystick section: not in the patch, kept across sounds */
 static volatile uint32_t cpu_pub;               /* the slowest render of the last second, in fm1_ticks */
 #define BLOCK_TICKS (HALF_FRAMES * 1000000u / FS * FM1_TICKS_PER_US)   /* 5.8 ms of ticks: 100 % */
 
@@ -89,8 +94,10 @@ static void app_audio(int32_t *out, uint32_t n)
 {
     static uint32_t worst, blocks;
     uint32_t t0, dt;
-    if (load_req) {                             /* a whole new sound, between two blocks */
+    if (load_req) {                             /* a whole new sound, between two blocks, with the stick as it is */
         sc_init(&syn, &staged);
+        syn.perf = perf;
+        sc_reprep(&syn);
         load_req = 0;
         ready = 1;
     }
@@ -313,17 +320,17 @@ static int quiet(void)                          /* nothing sounds, not even a re
     return 1;
 }
 
-static sc_perf_t perf;                          /* the joystick section: not in the patch, kept across sounds */
-
-static void load(uint32_t i)                    /* a preset in, whole, between two audio blocks */
+/* a preset in, whole: the audio interrupt takes it at its next block (nothing waits for it, so it also
+ * works before the audio runs, as in a harbor module's init). Notes and edits posted before then are lost
+ * with the old sound. */
+static void load(uint32_t i)
 {
     uint32_t n;
-    while (load_req) platform_poll();
+    load_req = 0;                               /* (the interrupt leaves staged alone while it is written) */
+    __asm__ volatile("" ::: "memory");
     staged = SC_PRESETS[i % SC_N_PRESETS];
+    __asm__ volatile("" ::: "memory");
     load_req = 1;
-    while (load_req) platform_poll();           /* within one block, 5.8 ms */
-    syn.perf = perf;                            /* (32-bit fields, then the event) */
-    sc_post(&syn, SC_EV_PATCH, 0, 0);
     for (n = 0; n < 128u; n++) sounding[n] = 0;
 }
 
@@ -436,138 +443,154 @@ static void draw_oct(int32_t oct)
     draw_text_box(0, Y_OCT, 240, &FONT_S, s, C_GREY, 1);
 }
 
-/* ---- the main loop */
-static void app_main(void)
-{
-    struct { uint8_t preset, page; int8_t oct; } set = {0, 0, 0};   /* what survives a power-off */
-    uint32_t prev = 0, k, dirty = 0, t_change = 0, edited = 0, patch_dirty = 0;
-    uint32_t lit_drawn = ~0u, page_drawn = ~0u, preset_drawn = ~0u, edited_drawn = ~0u, cpu_drawn = ~0u;
-    int32_t oct_drawn = 99, shown[4] = {0}, stick_drawn[2] = {-1, -1};
-    uint32_t knob_ms[4] = {0}, knob_acc[4] = {0};
-    uint8_t held[27] = {0};                     /* the note each key started */
+/* ---- the main loop: app_init() once, then app_loop() over and over (Dinghy's app_main, or a harbor
+ * module's init() and draw()) */
+static struct { uint8_t preset, page; int8_t oct; } set;   /* what survives a power-off */
+static uint32_t prev, dirty, t_change, edited, patch_dirty;
+static uint32_t lit_drawn, page_drawn, preset_drawn, edited_drawn, cpu_drawn;
+static int32_t oct_drawn, shown[4], stick_drawn[2];
+static uint32_t knob_ms[4], knob_acc[4];
+static uint8_t held[27];                        /* the note each key started */
 
+static void redraw_all(void)                    /* the whole screen again, from black */
+{
+    lit_drawn = page_drawn = preset_drawn = edited_drawn = cpu_drawn = ~0u;
+    oct_drawn = 99;
+    stick_drawn[0] = stick_drawn[1] = -1;
+    lcd_fill(0, 0, 240, 240, C_BLACK);
+}
+
+static void app_init(void)
+{
     settings_load(&set, sizeof set);
     if (set.preset >= SC_N_PRESETS) set.preset = 0;
     if (set.page >= N_PAGES) set.page = 0;
     if (set.oct < -2 || set.oct > 2) set.oct = 0;
     sc_perf_default(&perf);
     load(set.preset);
+    redraw_all();
+}
 
-    lcd_fill(0, 0, 240, 240, C_BLACK);
+static void app_loop(void)
+{
+    uint32_t keys, down, up, rel, b, lit = 0, base = (uint32_t)(KEY0 + 12 * set.oct), cpu, k;
+    int32_t d;
+    uint8_t st, d1, d2;
+    platform_poll();
 
-    for (;;) {
-        uint32_t keys, down, up, rel, b, lit = 0, base = (uint32_t)(KEY0 + 12 * set.oct), cpu;
-        int32_t d;
-        uint8_t st, d1, d2;
-        platform_poll();
+    keys = fm1_in.notes;                    /* bit k: key k (0 = F3 .. 26 = G5) */
+    down = keys & ~prev;
+    up = prev & ~keys;
+    prev = keys;
+    for (k = 0; k < 27u; k++) {             /* a key stops the note it started (the octave may change meanwhile) */
+        if (down >> k & 1u) { held[k] = (uint8_t)(base + k); note_on(held[k], 100); midi_send(0x90, held[k], 100); }
+        if (up >> k & 1u) { note_off(held[k]); midi_send(0x80, held[k], 0); }
+    }
 
-        keys = fm1_in.notes;                    /* bit k: key k (0 = F3 .. 26 = G5) */
-        down = keys & ~prev;
-        up = prev & ~keys;
-        prev = keys;
-        for (k = 0; k < 27u; k++) {             /* a key stops the note it started (the octave may change meanwhile) */
-            if (down >> k & 1u) { held[k] = (uint8_t)(base + k); note_on(held[k], 100); midi_send(0x90, held[k], 100); }
-            if (up >> k & 1u) { note_off(held[k]); midi_send(0x80, held[k], 0); }
-        }
-
-        b = fm1_input_edges(&rel);
-        if (b & (1u << BTN_OCT_DOWN) && set.oct > -2) { set.oct--; dirty = 1; t_change = fm1_ms; }
-        if (b & (1u << BTN_OCT_UP) && set.oct < 2) { set.oct++; dirty = 1; t_change = fm1_ms; }
-        for (k = 0; k < N_GROUPS; k++)
-            if (b & (1u << GROUP[k].btn)) {
-                uint32_t in = set.page >= GROUP[k].first && set.page < GROUP[k].first + GROUP[k].n;
-                if (in && GROUP[k].first == PG_STICK) {          /* SEL on the joystick page: centre it */
-                    perf.joy_x = perf.joy_y = 0;
-                    syn.perf.joy_x = syn.perf.joy_y = 0;
-                    patch_dirty = 1;
-                }
-                set.page = (uint8_t)(in ? GROUP[k].first + (set.page - GROUP[k].first + 1u) % GROUP[k].n : GROUP[k].first);
-                dirty = 1; t_change = fm1_ms;
+    b = fm1_input_edges(&rel);
+    if (b & (1u << BTN_OCT_DOWN) && set.oct > -2) { set.oct--; dirty = 1; t_change = fm1_ms; }
+    if (b & (1u << BTN_OCT_UP) && set.oct < 2) { set.oct++; dirty = 1; t_change = fm1_ms; }
+    for (k = 0; k < N_GROUPS; k++)
+        if (b & (1u << GROUP[k].btn)) {
+            uint32_t in = set.page >= GROUP[k].first && set.page < GROUP[k].first + GROUP[k].n;
+            if (in && GROUP[k].first == PG_STICK) {          /* SEL on the joystick page: centre it */
+                perf.joy_x = perf.joy_y = 0;
+                syn.perf.joy_x = syn.perf.joy_y = 0;
+                patch_dirty = 1;
             }
-
-        if ((d = fm1_enc_take(ENC_PRESETS)) != 0) {
-            set.preset = (uint8_t)(((int32_t)set.preset + d % SC_N_PRESETS + SC_N_PRESETS) % SC_N_PRESETS);
-            load(set.preset);
-            edited = 0;
+            set.page = (uint8_t)(in ? GROUP[k].first + (set.page - GROUP[k].first + 1u) % GROUP[k].n : GROUP[k].first);
             dirty = 1; t_change = fm1_ms;
         }
-        for (k = 0; k < 4u; k++)
-            if ((d = fm1_enc_take(ENC_KNOB1 + k)) != 0) {
-                const prm_t *p = &PAGE[set.page][k];
-                knob_acc[k] = fm1_ms - knob_ms[k] < 60u ? (knob_acc[k] < 15u ? knob_acc[k] + 1u : 15u) : 1u;
-                knob_ms[k] = fm1_ms;
-                prm_turn(p, d, (int32_t)(1u + knob_acc[k] / 4u));   /* turned fast: up to 4 steps a detent */
-                if (p->where == W_PERF) *(int32_t *)((uint8_t *)&perf + p->off) = *field32(0, p, p->off);
-                else edited = 1;
-                patch_dirty = 1;
-            }
-        for (k = 0; k < 2u; k++)                /* SELECT: the stick up / down; ALGORITHM: left / right */
-            if ((d = fm1_enc_take(k ? ENC_ALGORITHM : ENC_SELECT)) != 0) {
-                const prm_t *p = &PAGE[PG_STICK][k ? 0 : 1];
-                prm_turn(p, d, 2);
-                *(int32_t *)((uint8_t *)&perf + p->off) = *field32(0, p, p->off);
-                patch_dirty = 1;
-            }
 
-        while (midi_get(&st, &d1, &d2) || din_get(&st, &d1, &d2)) {   /* USB-MIDI, then the DIN jack */
-            uint32_t ty = st & 0xF0u;
-            if (ty == 0x90u && d2) note_on(d1, d2);
-            else if (ty == 0x80u || ty == 0x90u) note_off(d1);
-            else if (ty == 0xE0u) sc_post(&syn, SC_EV_BEND, 0, ((int32_t)(d1 | d2 << 7) - 8192) * 16);   /* +-2 st, Q16 */
-            else if (ty == 0xC0u) { set.preset = (uint8_t)(d1 % SC_N_PRESETS); load(set.preset); edited = 0; dirty = 1; t_change = fm1_ms; }
-            else if (ty == 0xB0u && d1 == 1u) {                  /* the mod wheel: the stick pushed left */
-                perf.joy_x = syn.perf.joy_x = -(int32_t)(d2 * 516u);
-                patch_dirty = 1;
-            } else if (ty == 0xB0u && d1 == 74u) {
-                int L;
-                for (L = 0; L < 2; L++) syn.patch.layer[L].cutoff = (int32_t)(d2 * 516u);
-                edited = 1;
-                patch_dirty = 1;
-            } else if (ty == 0xB0u && (d1 == 91u || d1 == 93u)) {   /* the reverb's mix, the chorus's */
-                if (d1 == 91u) { syn.patch.fx.reverb.mix = (int32_t)(d2 * 516u); syn.patch.fx.reverb.on = (int8_t)(d2 != 0); }
-                else { syn.patch.fx.chorus.mix = (int32_t)(d2 * 516u); syn.patch.fx.chorus.on = (int8_t)(d2 != 0); }
-                edited = 1;
-                patch_dirty = 1;
-            } else if (ty == 0xB0u && (d1 == 120u || d1 == 123u)) {
-                sc_post(&syn, SC_EV_ALL_OFF, 0, 0);
-                for (k = 0; k < 128u; k++) sounding[k] = 0;
-            }
+    if ((d = fm1_enc_take(ENC_PRESETS)) != 0) {
+        set.preset = (uint8_t)(((int32_t)set.preset + d % SC_N_PRESETS + SC_N_PRESETS) % SC_N_PRESETS);
+        load(set.preset);
+        edited = 0;
+        dirty = 1; t_change = fm1_ms;
+    }
+    for (k = 0; k < 4u; k++)
+        if ((d = fm1_enc_take(ENC_KNOB1 + k)) != 0) {
+            const prm_t *p = &PAGE[set.page][k];
+            knob_acc[k] = fm1_ms - knob_ms[k] < 60u ? (knob_acc[k] < 15u ? knob_acc[k] + 1u : 15u) : 1u;
+            knob_ms[k] = fm1_ms;
+            prm_turn(p, d, (int32_t)(1u + knob_acc[k] / 4u));   /* turned fast: up to 4 steps a detent */
+            if (p->where == W_PERF) *(int32_t *)((uint8_t *)&perf + p->off) = *field32(0, p, p->off);
+            else edited = 1;
+            patch_dirty = 1;
         }
-        if (patch_dirty) { sc_post(&syn, SC_EV_PATCH, 0, 0); patch_dirty = 0; }
+    for (k = 0; k < 2u; k++)                /* SELECT: the stick up / down; ALGORITHM: left / right */
+        if ((d = fm1_enc_take(k ? ENC_ALGORITHM : ENC_SELECT)) != 0) {
+            const prm_t *p = &PAGE[PG_STICK][k ? 0 : 1];
+            prm_turn(p, d, 2);
+            *(int32_t *)((uint8_t *)&perf + p->off) = *field32(0, p, p->off);
+            patch_dirty = 1;
+        }
 
-        base = (uint32_t)(KEY0 + 12 * set.oct);
-        for (k = 0; k < 27u; k++)               /* what sounds, on the keys of this octave */
-            if (sounding[base + k]) lit |= 1u << k;
-        for (k = 0; k < 27u; k++)
-            fm1_led_key(KEY_LED(k), lit >> k & 1u);
-        fm1_led_key(BTN_OCT_DOWN, set.oct < 0);
-        fm1_led_key(BTN_OCT_UP, set.oct > 0);
-        for (k = 0; k < N_GROUPS; k++)
-            fm1_led_key(GROUP[k].btn, set.page >= GROUP[k].first && set.page < GROUP[k].first + GROUP[k].n);
-
-        /* redraw only what changed */
-        cpu = cpu_pub * 100u / BLOCK_TICKS;
-        if (set.preset != preset_drawn || edited != edited_drawn || cpu != cpu_drawn) {
-            draw_head(set.preset, (int)edited, cpu);
-            edited_drawn = edited;
-            cpu_drawn = cpu;
-        }
-        if (set.preset != preset_drawn) { draw_name(set.preset); preset_drawn = set.preset; page_drawn = ~0u; }
-        if (set.page != page_drawn) { draw_page(set.page); page_drawn = set.page; for (k = 0; k < 4u; k++) shown[k] = 0x7FFFFFFF; }
-        for (k = 0; k < 4u; k++) {
-            int32_t v = prm_get(&PAGE[set.page][k]);
-            if (v != shown[k]) { shown[k] = v; draw_prm(k, &PAGE[set.page][k], v); }
-        }
-        if (perf.joy_x != stick_drawn[0] || perf.joy_y != stick_drawn[1]) {
-            stick_drawn[0] = perf.joy_x; stick_drawn[1] = perf.joy_y;
-            draw_stick();
-        }
-        if (lit != lit_drawn) { lit_drawn = lit; draw_keys(lit); }
-        if (set.oct != oct_drawn) { oct_drawn = set.oct; draw_oct(set.oct); }
-
-        if (dirty && fm1_ms - t_change > 2000u && (int32_t)fm1_ms - note_ms > 2000 && quiet()) {
-            settings_save(&set, sizeof set);    /* 2 s after the change, when silent (an erase stalls the sound) */
-            dirty = 0;
+    while (midi_get(&st, &d1, &d2) || din_get(&st, &d1, &d2)) {   /* USB-MIDI, then the DIN jack */
+        uint32_t ty = st & 0xF0u;
+        if (ty == 0x90u && d2) note_on(d1, d2);
+        else if (ty == 0x80u || ty == 0x90u) note_off(d1);
+        else if (ty == 0xE0u) sc_post(&syn, SC_EV_BEND, 0, ((int32_t)(d1 | d2 << 7) - 8192) * 16);   /* +-2 st, Q16 */
+        else if (ty == 0xC0u) { set.preset = (uint8_t)(d1 % SC_N_PRESETS); load(set.preset); edited = 0; dirty = 1; t_change = fm1_ms; }
+        else if (ty == 0xB0u && d1 == 1u) {                  /* the mod wheel: the stick pushed left */
+            perf.joy_x = syn.perf.joy_x = -(int32_t)(d2 * 516u);
+            patch_dirty = 1;
+        } else if (ty == 0xB0u && d1 == 74u) {
+            int L;
+            for (L = 0; L < 2; L++) syn.patch.layer[L].cutoff = (int32_t)(d2 * 516u);
+            edited = 1;
+            patch_dirty = 1;
+        } else if (ty == 0xB0u && (d1 == 91u || d1 == 93u)) {   /* the reverb's mix, the chorus's */
+            if (d1 == 91u) { syn.patch.fx.reverb.mix = (int32_t)(d2 * 516u); syn.patch.fx.reverb.on = (int8_t)(d2 != 0); }
+            else { syn.patch.fx.chorus.mix = (int32_t)(d2 * 516u); syn.patch.fx.chorus.on = (int8_t)(d2 != 0); }
+            edited = 1;
+            patch_dirty = 1;
+        } else if (ty == 0xB0u && (d1 == 120u || d1 == 123u)) {
+            sc_post(&syn, SC_EV_ALL_OFF, 0, 0);
+            for (k = 0; k < 128u; k++) sounding[k] = 0;
         }
     }
+    if (patch_dirty) { sc_post(&syn, SC_EV_PATCH, 0, 0); patch_dirty = 0; }
+
+    base = (uint32_t)(KEY0 + 12 * set.oct);
+    for (k = 0; k < 27u; k++)               /* what sounds, on the keys of this octave */
+        if (sounding[base + k]) lit |= 1u << k;
+    for (k = 0; k < 27u; k++)
+        fm1_led_key(KEY_LED(k), lit >> k & 1u);
+    fm1_led_key(BTN_OCT_DOWN, set.oct < 0);
+    fm1_led_key(BTN_OCT_UP, set.oct > 0);
+    for (k = 0; k < N_GROUPS; k++)
+        fm1_led_key(GROUP[k].btn, set.page >= GROUP[k].first && set.page < GROUP[k].first + GROUP[k].n);
+
+    /* redraw only what changed */
+    cpu = cpu_pub * 100u / BLOCK_TICKS;
+    if (set.preset != preset_drawn || edited != edited_drawn || cpu != cpu_drawn) {
+        draw_head(set.preset, (int)edited, cpu);
+        edited_drawn = edited;
+        cpu_drawn = cpu;
+    }
+    if (set.preset != preset_drawn) { draw_name(set.preset); preset_drawn = set.preset; page_drawn = ~0u; }
+    if (set.page != page_drawn) { draw_page(set.page); page_drawn = set.page; for (k = 0; k < 4u; k++) shown[k] = 0x7FFFFFFF; }
+    for (k = 0; k < 4u; k++) {
+        int32_t v = prm_get(&PAGE[set.page][k]);
+        if (v != shown[k]) { shown[k] = v; draw_prm(k, &PAGE[set.page][k], v); }
+    }
+    if (perf.joy_x != stick_drawn[0] || perf.joy_y != stick_drawn[1]) {
+        stick_drawn[0] = perf.joy_x; stick_drawn[1] = perf.joy_y;
+        draw_stick();
+    }
+    if (lit != lit_drawn) { lit_drawn = lit; draw_keys(lit); }
+    if (set.oct != oct_drawn) { oct_drawn = set.oct; draw_oct(set.oct); }
+
+    if (dirty && fm1_ms - t_change > 2000u && (int32_t)fm1_ms - note_ms > 2000 && quiet()) {
+        settings_save(&set, sizeof set);    /* 2 s after the change, when silent (an erase stalls the sound) */
+        dirty = 0;
+    }
+}
+
+static void app_main(void)
+{
+    app_init();
+    for (;;)
+        app_loop();
 }
