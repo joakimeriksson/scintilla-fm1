@@ -7,11 +7,17 @@ as an engine for the **M-VAVE FM-1** pocket synth: fixed-point C for its JieLi A
 240 MHz cores), checked sample by sample against the browser original and measured on the emulated FM-1
 ([fm1-emu](https://github.com/joakimeriksson/fm1-emu)).
 
-**Status: a firmware, in the emulator.** The engine plays all 80 factory patches (the 40 PRESETS and 40 MEMORIES,
+**Status: 0.1, runs on the FM-1.** The engine plays all 80 factory patches (the 40 PRESETS and 40 MEMORIES,
 Paul Wiffen's Laser Harp "Ring mod." among them) on this computer and on the emulated FM-1, with the same bits on
 both. [`firmware/`](firmware) makes it a firmware of its own on Dinghy: the keys, the knobs and pages, the screen,
-USB and DIN MIDI, installable as `scintilla.fwsc`. Tested end to end in fm1-emu; never installed on a real FM-1.
+USB and DIN MIDI, installable as `scintilla.fwsc`. Installed and played on a real FM-1 (2026-10-23); every check in the tests runs in
+fm1-emu.
 The delay is not there yet (see [PLAN.md](PLAN.md)); the reverb is an algorithmic one measured against the app's.
+
+**Get it:** `scintilla.fwsc` from the [latest release](https://github.com/joakimeriksson/scintilla-fm1/releases/latest), installed with the
+[FM-1 Firmware Hub](https://fm1.designburgapps.com) or `firmware/tools/fm1_install.py scintilla.fwsc` (USB-MIDI).
+Hold **OCT-** while switching on for the USB rescue; the hub takes it back to the official firmware. The release
+also has a short video of it playing.
 
 ## What is in it
 

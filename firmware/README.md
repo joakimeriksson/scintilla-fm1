@@ -6,9 +6,8 @@ there, as a firmware of its own on [Dinghy](https://github.com/zvenson/dinghy) 0
 
 <p align="center"><img src="docs/screen.png" width="240" alt="The screen: the preset, the CPU load, a page of four parameters, the joystick, the keys that sound"></p>
 
-> **Status: runs in the emulator, never on an FM-1.** Every check below is in
-> [fm1-emu](https://github.com/joakimeriksson/fm1-emu) (`tests/emu_test.py`). Installing it on a real FM-1 is a
-> separate step, not taken yet.
+> **Status: 0.1, runs on the FM-1.** Installed and played on a real FM-1 (2026-10-23). Every check below is in
+> [fm1-emu](https://github.com/joakimeriksson/fm1-emu) (`tests/emu_test.py`).
 
 ## Playing it
 
