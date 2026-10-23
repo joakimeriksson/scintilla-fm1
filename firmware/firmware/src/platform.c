@@ -307,6 +307,7 @@ void fm1_cstart(void)
     extern uint32_t _data_start[], _data_end[], _data_load[], _bss_start[], _bss_end[];
     extern uint32_t _pool_start[], _pool_end[], _rt_start[], _rt_end[], _rt_load[];
     uint32_t *s, *d, p3, boot_mode;
+    fm1_cpu1_halt();                            /* a core 1 left running by the firmware before (hal/fm1_sys.h) */
     fm1_time_init();
     fm1_reset_reason();
     p3 = fm1_boot.p3_rst;

@@ -14,6 +14,7 @@
  *   fm1_updata_parm_clear()  zero the record (CRC 0: ignored on a warm reset)
  *   fm1_mailbox_clear()  zero 0x01C7FD80..0x01C7FDFF (boot info, mailbox) at cold start
  *   fm1_mem_readable(a, n) / fm1_peek8(a)   debug reads of RAM / XIP only
+ *   fm1_cpu1_halt()      hold the second core (first thing at boot: see there)
  */
 #pragma once
 #include <stdint.h>
@@ -28,6 +29,40 @@
 #define FM1_UPDATA_PARM_LEN 112u
 
 static uint32_t fm1_p33_timeouts;
+
+/* ------------------------------------------------------- second core --- */
+/* This firmware never starts core 1, but the one before it may have (Jangada, X0X, Felucca's 2ND CORE ON), and
+ * not every reset stops it: a core 1 still running from before would execute whatever this firmware's startup
+ * writes into the RAM under it. So the boot holds it first, as Felucca's does (its hal/fm1_sys.h, fm1_cpu1_halt):
+ * C1_CON bit 1 set, then bit 3 (enable) cleared; registers only, harmless when it never ran. The bus-invalid traps
+ * are off around the hold: cutting core 1's read off the bus raises an AXI read invalid a few instructions later */
+#define FM1_C1_CON (*(volatile uint32_t *)0x1EEE004u)
+#define FM1__DBG_WR_EN (*(volatile uint32_t *)0x1EEE240u)
+#define FM1__DBG_MSG_CLR (*(volatile uint32_t *)0x1EEE248u)
+#define FM1__DBG_EN (*(volatile uint32_t *)0x1EEE340u)
+#define FM1__DBG_BUS 0x003F0030u                 /* bus-invalid traps: AXI rd/wr (4, 5), C0/C1 fetch/rd/wr (16..21) */
+FM1_INLINE void fm1_cpu1_halt(void)
+{
+    uint32_t locked = !(FM1__DBG_WR_EN & 1u), en, bus = FM1__DBG_BUS;
+    volatile uint32_t n;
+    __asm__("" : "+r"(bus));
+    if (locked)
+        FM1__DBG_WR_EN = 0xE7u;                  /* unlock (as fm1_guard.h) */
+    en = FM1__DBG_EN;
+    FM1__DBG_EN = en & ~bus;
+    __asm__ volatile("csync" ::: "memory");
+    FM1_C1_CON |= 0x2u;
+    FM1_C1_CON &= ~0x8u;
+    __asm__ volatile("csync" ::: "memory");
+    for (n = 0; n < 256u; n++)                   /* the flag comes some instructions after the hold */
+        ;
+    FM1__DBG_MSG_CLR = FM1__DBG_BUS;
+    __asm__ volatile("csync" ::: "memory");
+    FM1__DBG_EN = en;
+    if (locked && (FM1__DBG_WR_EN & 1u))
+        FM1__DBG_WR_EN = 0xE7u;                  /* lock again */
+    __asm__ volatile("csync" ::: "memory");
+}
 
 static uint8_t fm1__p33_xfer(uint8_t b)
 {
