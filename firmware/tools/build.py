@@ -4,7 +4,7 @@
 """Build Scintilla for the FM-1 (Dinghy, on Felucca / SLOOP's platform): the app, the update loader and an
 installable .fwsc package.
 
-  tools/build.py [--release X.Y[-suffix]]
+  tools/build.py [--release X.Y[.Z][-suffix]]
 
 Outputs in build/: scintilla.bin (app), loader/ota.bin (update loader),
 scintilla.fwsc (package). See README.md for the toolchain and the SDK.
@@ -52,7 +52,8 @@ SDK_SHA256 = {
     "cfg/eq_cfg_hw.bin": "41167491bffed4651750719c973d2758adeb9021a5670d02d6a53c85ed80ea7d",
 }
 
-PRODUCT = "FM-1_960"                # Scintilla: 96N (Dinghy is 99N, fm1-harbor 95N; the installer wants FM-1_9NN)
+PRODUCT = "FM-1_96300000"           # Scintilla: 963 + the version XYYZZ (FM-1_96300101 is 0.1.1); no other firmware
+                                    # in the hub's list reports 963... (960 is SID-1, 961 FOMAJAM, 962 Shine On)
 VERSION = None                      # APP_VER for release builds
 
 
@@ -291,16 +292,16 @@ def mmio_check():
 def main():
     global PRODUCT, VERSION
     ap = argparse.ArgumentParser()
-    ap.add_argument("--release", metavar="X.Y", help="release build: identity FM-1_9XY, version string X.Y")
+    ap.add_argument("--release", metavar="X.Y.Z", help="release build: identity FM-1_963XYYZZ, version string X.Y.Z")
     ap.add_argument("--sdk", type=Path, help="JieLi AC79 SDK checkout (default: $AC79_SDK)")
     a = ap.parse_args()
     name = "scintilla.fwsc"
-    if a.release:                   # one digit each: the identity has room for two (X.Y; a .Z only in the text)
-        m = re.fullmatch(r"(\d)\.(\d)(\.\d)?(-[A-Za-z0-9]+)?", a.release)
+    if a.release:                   # X one digit, Y and Z up to two: the identity is 963XYYZZ (a suffix only in the text)
+        m = re.fullmatch(r"(\d)\.(\d{1,2})(?:\.(\d{1,2}))?(-[A-Za-z0-9]+)?", a.release)
         if not m:
-            raise SystemExit(f"--release {a.release}: use X.Y, X.Y.Z or X.Y-suffix, one digit each")
-        PRODUCT = "FM-1_96" + m[2]
-        VERSION = m[1] + "." + m[2] + (m[3] or "")
+            raise SystemExit(f"--release {a.release}: use X.Y, X.Y.Z or X.Y.Z-suffix (X one digit, Y and Z up to two)")
+        PRODUCT = f"FM-1_963{m[1]}{int(m[2]):02d}{int(m[3] or 0):02d}"
+        VERSION = m[1] + "." + m[2] + ("." + m[3] if m[3] else "")
         name = f"scintilla-{a.release}.fwsc"
     fm1pkg_make.SDK = a.sdk
     for rel, sha in SDK_SHA256.items():          # fail early without the SDK

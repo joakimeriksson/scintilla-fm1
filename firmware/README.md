@@ -76,8 +76,9 @@ Changes to Dinghy's own files: `platform.c` calls `APP_EARLY_INIT` before the ke
 as fm1-harbor does); `gfx.c` and `tests/host.c` build host mode on macOS; `tools/build.py` copies and compiles the
 engine and names the package.
 
-**Package identity `FM-1_96N`** (Dinghy is 99N, fm1-harbor 95N): picked from the ones known to be taken; check the
-[FM-1 Firmware Hub](https://fm1.designburgapps.com)'s list before a release.
+**Package identity `FM-1_963XYYZZ`**, the version in the last five digits (`FM-1_96300101` is 0.1.1;
+`./build.sh --release 0.1.1`). No other firmware in the [FM-1 Firmware Hub](https://thefirmwarehub.com)'s list
+reports a number starting with 963 (2026-10-23); 0.1 was `FM-1_960`, which SID-1 also uses.
 
 ## License
 
