@@ -53,8 +53,8 @@ NOTES += [(O + 0.2, O + 0.55, [49, 53, 56, 61], 110),     # Db stab
           (O + 1.2, O + 3.2, [53, 56, 60, 65, 72], 120)]  # Fm, held
 SECTIONS = [(0.0, "GLIDE STRINGS"), (8.8, "LASER HARP"), (O, "BRASS I")]
 END = round(O + 5.4, 2)
-CREDIT = O + 1.6                                    # the end card: who made it, where it is
-AUTHOR, REPO = "JOAKIM ERIKSSON", "github.com/joakimeriksson/scintilla-fm1"
+CREDIT = O + 1.6                                    # the end card: what it is, where it is
+CALL, REPO = "FREE & OPEN SOURCE", "github.com/joakimeriksson/scintilla-fm1"
 
 
 def keys():
@@ -159,7 +159,7 @@ class Frame:
         spaced(d, (W / 2, y1 - (80 if self.big else 58)), sec, self.f_sec, tuple(int(c * (1 - card)) for c in (255, 154, 60)), 10)
         if card > 0:
             cy = (y0 + y1) / 2
-            spaced(d, (W / 2, cy - (90 if self.big else 62)), AUTHOR, self.f_sec, tuple(int(c * card) for c in (240, 240, 245)), 10)
+            spaced(d, (W / 2, cy - (90 if self.big else 62)), CALL, self.f_sec, tuple(int(c * card) for c in (240, 240, 245)), 10)
             d.text((W / 2, cy + (20 if self.big else 12)), REPO, font=self.f_sub, fill=tuple(int(c * card) for c in (255, 154, 60)), anchor="mt")
         p = pan.resize((W, round(pan.height * W / pan.width)), Image.Resampling.LANCZOS)
         im.paste(p, (0, self.panel_y))
