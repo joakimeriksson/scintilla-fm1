@@ -10,6 +10,7 @@ complete source under the same licence too.
 | --- | --- |
 | The platform: `firmware/hal/`, `firmware/loader/`, `crt0.S`, `app.ld`, `firmware/src/` (`usb.c`, `ota.c`, `recovery.c`, `lcd.c`, `gfx.c`, `libc.c`, `bootguard.h`, `uac_fir.h`), `tools/` | Copyright (C) 2026 Leo Kuroshita (@kurogedelic), Hügelton Instruments ([Felucca](https://github.com/hugelton/Felucca)), with the changes of [SLOOP](https://github.com/isod89/sloop-fm1) (isod89) |
 | The wiring `platform.c`, the host mode `tests/host.c`, `tests/run_host.sh`, the docs in `docs/` | zvenson ([Dinghy](https://github.com/zvenson/dinghy)) |
+| The key sensing `firmware/src/sense.c` and its tables `firmware/gen/sense_tables.h` (GPL-3.0) | Charles Vestal ([Velo, fm1-velocity](https://github.com/charlesvestal/fm1-velocity)), its velocity map in fixed point by twochannels ([CS-1](https://github.com/twochannels/CS-1)), as fm1-harbor carries it (with its `hal/fm1_input.h` / `fm1_adc.h`: the scan's analog rows) |
 | The app `firmware/src/scintilla.c`, `tests/emu.py`, `tests/emu_test.py`, `tests/engine_ref.c`, the engine `../engine` | Joakim Eriksson |
 
 ## Third-party material

@@ -33,6 +33,14 @@ the host build's. A mismatch is a bug (in the engine, the compiler or the emulat
 
 ## Deliberate differences
 
+- Aftertouch and velocity from the keys are off until SETTINGS (GLO twice) turns them on: vibrato does not suit
+  every sound (Laser Harp's), so out of the box the FM-1 plays as 0.1 did.
+- Aftertouch (the firmware's, not the engine's): VoiceCore has none, nor had the Synthex. The firmware turns the
+  hardest press (a sensed key's, or MIDI's channel / poly pressure) into the stick pushed left beyond where it is
+  set (vibrato, as CC1), so the engine only sees the stick; `SC_EV_PERF` re-preps the layers for a stick move
+  without the reverb. A key's pressure under 8 (SETTINGS' FLOOR) counts as none: any vibrato switches the
+  voices' per-sample pitch path on (Ring mod. x8: 53 -> 63 % of a block), and a resting finger reads a count or
+  two of noise.
 - One phase per oscillator, where VoiceCore keeps one per waveform: they differ only if the waveform changes
   mid-note.
 - Pitch is Q16 semitones (resolution 1.5e-5); portamento runs in Q32 and the glide offsets in Q24, because in Q16 a

@@ -20,13 +20,16 @@ there, as a firmware of its own on [Dinghy](https://github.com/zvenson/dinghy) 0
 | **EDIT** | OSC 1, OSC 2, MIX (press again for the next page) |
 | **ENV** | FILTER, FILTER ENV, AMP ENV |
 | **LFO** | LFO 1 (rate, shape, to pitch, to cutoff), LFO 2 (rate, shape, the joystick's two LFO 2 depths) |
-| **GLO** | glide mode, amount, speed; poly / mono / unison |
+| **GLO** | glide mode, amount, speed; poly / mono / unison; press again: **SETTINGS** (below) |
 | **FX** | chorus (off, 1, 2, 3), volume, unison detune, tune; press again: reverb (off, plate, room, hall, galactic), size, damping, mix |
 | **SEL** (`SCL` on the panel) | the joystick page: X, Y and the two BEND depths; SEL again centres the stick |
 | **SELECT** | the joystick up and down: pitch bend (and the filter, by the BEND depths) |
 | **ALGORITHM** | the joystick left and right: LFO 2 into the pitch (left) or the filter (right) |
 | **OCT- OCT+** | the octave |
-| **MIDI in** | USB and the DIN jack, any channel: notes with velocity, pitch bend (2 semitones), CC1 = the stick pushed left (vibrato, as on the Synthex), CC74 the cutoff, CC91 the reverb's mix and CC93 the chorus's (0 turns it off), program change, CC120 / 123 |
+| **MIDI in** | USB and the DIN jack, any channel: notes with velocity, pitch bend (2 semitones), CC1 = the stick pushed left (vibrato, as on the Synthex), CC74 the cutoff, CC91 the reverb's mix and CC93 the chorus's (0 turns it off), program change, CC120 / 123, channel and poly pressure |
+| **The keys** | the bottom two rows are force sensed (Velo's sensing): how hard a key lands is its velocity, and pressing a held key harder is **aftertouch**: the stick pushed left, vibrato, springing back as you ease off (the screen's STICK X follows it). MIDI's pressure does the same; the keys send their notes and poly pressure out over USB. The top row plays at 100 |
+| **SETTINGS** | both are **off** at first (the keys play at 100, pressing harder does nothing), as some sounds are better without: TOUCH turns aftertouch on, DEPTH is how far the hardest press pushes the stick (100 %: all the way), FLOOR the pressure under which a key's is none (8: above a resting finger's noise), VELO turns velocity on. Kept in flash |
+| **USB audio** | class compliant, no driver: the computer records what the FM-1 plays (stereo, 44.1 or 48 kHz) |
 
 The preset, the octave and the page are kept in flash. Edits to a sound are not kept (yet): the `*` after the
 address says the sound differs from the preset. The top right shows the CPU: the slowest render of the last second,
@@ -56,8 +59,15 @@ What `tests/emu_test.py` checks, on fm1-emu's emulated FM-1 (fm1-live, headless)
   (`tests/engine_ref.c`) to the MASTER knob's rounding (-60 dB), once the reference has run as many blocks as the
   firmware had before the note (the chorus runs freely);
 - PRESETS loads the right sound, KNOB1 moves the cutoff by its steps;
-- eight voices of Ring mod., the heaviest factory sound, by the firmware's own meter (49 % of a block);
-- MIDI into the DIN jack: a program change and a note.
+- eight voices of Ring mod., the heaviest factory sound, by the firmware's own meter (53 % of a block);
+- MIDI into the DIN jack: a program change and a note;
+- **the keys' force** (fm1-live's model of the keys' carbon pills, in fm1-emu since 2026-10-23): off at first;
+  SETTINGS turns TOUCH and VELO on; a key landed softly plays at its velocity; pressing it harder is aftertouch (the stick pushed left, the sound moves from that
+  moment), easing off lets go; MIDI channel pressure does the same.
+
+In fm1-emu's window the keys are force sensed too: where on a key you click is how hard it lands (the velocity),
+and moving the pointer up and down on a held key presses it harder or lighter (the aftertouch). The bottom two
+rows only, as on the FM-1; turn TOUCH and VELO on first (GLO twice, KNOB1 and KNOB4).
 
 ## How it is made
 
@@ -73,8 +83,10 @@ The audio interrupt calls `sc_render()` for 256 frames. The main loop talks to i
 staging patch and taken in by the interrupt between two blocks, so a half-written sound is never played.
 
 Changes to Dinghy's own files: `platform.c` calls `APP_EARLY_INIT` before the key scan starts (the DIN jack's UART,
-as fm1-harbor does); `gfx.c` and `tests/host.c` build host mode on macOS; `tools/build.py` copies and compiles the
-engine and names the package.
+as fm1-harbor does) and reads the MASTER pot from the key scan while it senses the keys; `hal/fm1_input.h` and
+`hal/fm1_adc.h` are fm1-harbor's (the scan converts the two analog rows, PA7 / PA8, and the pot), and `src/sense.c`
+is Velo's key sensing (Charles Vestal's fm1-velocity, as CS-1 and fm1-harbor carry it); `gfx.c` and `tests/host.c`
+build host mode on macOS; `tools/build.py` copies and compiles the engine and names the package.
 
 **Package identity `FM-1_963XYYZZ`**, the version in the last five digits (`FM-1_96300101` is 0.1.1;
 `./build.sh --release 0.1.1`). No other firmware in the [FM-1 Firmware Hub](https://thefirmwarehub.com)'s list

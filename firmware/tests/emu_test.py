@@ -149,6 +149,40 @@ def main():
     check("midi", name == "Vibes" and peak(s, 1.05, 1.8) > 1000, f"program change 29 -> {name!r}; a note plays "
           f"(peak {peak(s, 1.05, 1.8)})")
 
+    # the keys' force (fm1-live's pills: ID@VEL lands a key at a velocity, ID~VEL presses it to another's
+    # force): off at first (the keys play at 100, pressing harder does nothing); SETTINGS (GLO twice)
+    # turns TOUCH (KNOB1) and VELO (KNOB4) on: a soft landing's velocity, then pressing harder is
+    # aftertouch, the stick pushed left (vibrato): the sound is the soft press's until then and moves
+    # after it; easing off lets it go
+    at, st = sym("at_applied"), sym("set")
+    off, _ = emu.run("1000:20@50,1300:20~127", 2000, OUT / "at_off", ram=True)
+    ram = (OUT / "at_off" / "ram.bin").read_bytes()
+    check("settings_off", ram[at] == 0 and ram[st + 3] == 0 and ram[st + 6] == 0,
+          f"at first TOUCH and VELO are off: pressed harder, the stick at {ram[at]} / 127")
+    on = "200:7,300:7^,400:7,500:7^,600:e2:1,650:e5:1,"
+    soft, _ = emu.run(on + "1000:20@50", 2000, OUT / "at_soft", ram=True)
+    ram = (OUT / "at_soft" / "ram.bin").read_bytes()
+    vel = ram[sym("key_vel") + 6]
+    check("settings", ram[st + 1] == 10 and ram[st + 3] == 1 and ram[st + 6] == 1,
+          f"GLO twice: page {ram[st + 1]} (SETTINGS); TOUCH {ram[st + 3]}, VELO {ram[st + 6]}")
+    hard, _ = emu.run(on + "1000:20@50,1300:20~127", 2000, OUT / "at_hard", ram=True)
+    a_hard = (OUT / "at_hard" / "ram.bin").read_bytes()[at]
+    eased, _ = emu.run(on + "1000:20@50,1300:20~127,1600:20~50", 2000, OUT / "at_eased", ram=True)
+    a_eased = (OUT / "at_eased" / "ram.bin").read_bytes()[at]
+    h, w = stereo(hard), stereo(soft)
+    onset = int(np.argmax(np.any(w != 0, axis=1)))          # the note (the recording starts after the boot)
+    diff = np.nonzero(np.any(h != w, axis=1))[0]
+    apart = (diff[0] - onset) / FS if len(diff) else -1      # the press harder is 0.3 s after the landing
+    r, ref = h[onset + int(0.5 * FS):] - w[onset + int(0.5 * FS):], w[onset + int(0.5 * FS):]
+    moved = 10 * np.log10((r * r).sum() / max(1e-9, (ref * ref).sum()))
+    check("velocity", 30 < vel < 80, f"a key landed at 50's force plays at velocity {vel}")
+    check("aftertouch", a_hard == 127 and a_eased == 0 and 0.2 < apart < 0.4 and moved > -20,
+          f"pressed harder: the stick at {a_hard} / 127 (eased off: {a_eased}); the sound the soft press's until "
+          f"{apart:.3f} s after the landing, {moved:.1f} dB away after it")
+    s, _ = emu.run(on + "1000:m903c64,1300:md07f", 1800, OUT / "at_midi", ram=True)
+    a_midi = (OUT / "at_midi" / "ram.bin").read_bytes()[at]
+    check("midi_pressure", a_midi == 127, f"MIDI channel pressure 127: the stick at {a_midi} / 127")
+
     print(f"{len(failures)} failed" if failures else "all passed")
     return 1 if failures else 0
 
