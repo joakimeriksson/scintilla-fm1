@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scintilla</title>
+<meta name="description" content="Scintilla: the 1981 Elka Synthex, reborn on the M-VAVE FM-1. All 80 factory sounds, the laser harp among them. Install it from this page.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Scintilla: the 1981 Elka Synthex on the M-VAVE FM-1">
+<meta property="og:description" content="All 80 factory sounds, the laser harp among them, on the FM-1's own CPU. Install it from the page.">
+<meta property="og:url" content="https://joakimeriksson.github.io/scintilla-fm1/">
+<meta property="og:image" content="https://joakimeriksson.github.io/scintilla-fm1/social.png">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="640">
+<meta property="og:image:alt" content="Scintilla: laser beams behind the FM-1's screen showing RING MOD.">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="screen.png" type="image/png">
+<style>
+  :root {
+    --bg: #0b0a0c; --bg2: #141217; --line: #2c2830; --ink: #efe9e2; --dim: #a39a94;
+    --amber: #f0973a; --amber-deep: #8a4a14; --laser: #5be37a;
+    --sans: "Avenir Next", Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.55 var(--sans); }
+  a { color: var(--amber); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  main { max-width: 1060px; margin: 0 auto; padding: 0 16px 48px; }
+  header { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 18px 0; }
+  header .name { font-weight: 600; letter-spacing: .32em; text-transform: uppercase; color: var(--ink); }
+  header nav { display: flex; gap: 18px; font-size: 15px; }
+
+  .hero { display: grid; grid-template-columns: 1.05fr 1fr; gap: clamp(20px, 4vw, 48px); align-items: center;
+    padding: clamp(16px, 4vw, 40px) 0 clamp(28px, 5vw, 56px); }
+  .kicker { margin: 0; color: var(--laser); font: 13px var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+  h1 { margin: 10px 0 14px; font-size: clamp(34px, 5.6vw, 58px); line-height: 1.04; letter-spacing: -.02em; }
+  h1 em { font-style: normal; color: var(--amber); }
+  .lede { margin: 0; color: #d9d1c9; max-width: 56ch; }
+  .hero img { width: 100%; height: auto; border-radius: 16px; border: 1px solid var(--line); display: block;
+    box-shadow: 0 30px 80px rgba(91, 227, 122, .10); }
+
+  .install { margin-top: 24px; }
+  .btn { display: inline-flex; align-items: center; height: 44px; padding: 0 18px; border-radius: 10px; cursor: pointer;
+    font: 600 15px var(--sans); color: #1d0f03; background: var(--amber); border: 1px solid var(--amber); }
+  .btn:hover { background: #f5ad62; }
+  .btn:disabled { opacity: .45; cursor: default; }
+  .install progress:not([hidden]) { display: block; width: min(420px, 100%); height: 8px; margin: 12px 0 0; accent-color: var(--amber); }
+  .install .fm1-install-status { margin: 10px 0 0; min-height: 1.4em; }
+  .install .fm1-install-note { margin: 6px 0 0; font-size: 14px; color: var(--dim); max-width: 62ch; }
+  .alt { margin: 14px 0 0; font-size: 15px; color: var(--dim); }
+
+  section.more { border-top: 1px solid var(--line); padding: clamp(28px, 5vw, 48px) 0 0; }
+  h2 { margin: 0 0 14px; font-size: clamp(22px, 3vw, 30px); letter-spacing: -.01em; }
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+  .cols > div { background: var(--bg2); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; }
+  .cols h3 { margin: 0 0 6px; font-size: 16px; color: var(--amber); }
+  .cols p { margin: 0; font-size: 15px; color: #d4ccc4; }
+  code { font: 14px var(--mono); color: #e8d9c8; }
+  footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--line); font-size: 14px; color: var(--dim); }
+
+  @media (max-width: 760px) {
+    .hero { grid-template-columns: 1fr; }
+    header nav { gap: 12px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <span class="name">Scintilla</span>
+    <nav><a href="#more">What it is</a><a href="https://github.com/joakimeriksson/scintilla-fm1">Source</a>
+      <a href="https://github.com/joakimeriksson/scintilla-fm1/releases/latest">Releases</a></nav>
+  </header>
+
+  <section class="hero">
+    <div>
+      <p class="kicker">Firmware for the M-VAVE FM-1</p>
+      <h1>The 1981 Elka Synthex,<br><em>reborn on the FM-1</em>.</h1>
+      <p class="lede">All 80 factory sounds, Paul Wiffen's laser harp "Ring mod." among them: the Synthex of
+        synthex-web, ported to integer C and checked sample by sample against the original, playing on the FM-1's
+        own CPU. Two layers of 8 voices, chorus and reverb, and the four knobs edit what is on the screen.</p>
+      <div class="install" id="install" data-fm1-install="scintilla" hidden></div>
+      <p class="alt">Or the <code>.fwsc</code> from the <a href="https://github.com/joakimeriksson/scintilla-fm1/releases/latest">latest
+        release</a>, with the <a href="https://thefirmwarehub.com">FM-1 Firmware Hub</a> or
+        <code>firmware/tools/fm1_install.py</code>. Scintilla is also a module of
+        <a href="https://joakimeriksson.github.io/fm1-dock/">fm1-dock</a>, next to other synths.</p>
+    </div>
+    <img src="scintilla.png" width="720" height="720" alt="Scintilla on the FM-1, playing the laser harp (Ring mod.), with laser beams above it">
+  </section>
+
+  <section class="more" id="more">
+    <h2>What it is</h2>
+    <div class="cols">
+      <div><h3>The sounds</h3><p>The Synthex's 80 factory sounds: PRESETS 10 to 49 and MEMORIES 10 to 49, on
+        the PRESETS knob.</p></div>
+      <div><h3>The voices</h3><p>Two layers of 8 voices, single, split or double; poly, mono or unison; glide and
+        portamento.</p></div>
+      <div><h3>The effects</h3><p>Chorus, and an algorithmic reverb: plate, room, hall or galactic.</p></div>
+      <div><h3>On the knobs</h3><p>KNOB1 to KNOB4 edit the four parameters on the screen, on pages for the
+        oscillators, mixer, filter, envelopes, LFOs, glide, output, reverb and joystick.</p></div>
+      <div><h3>MIDI</h3><p>In over USB and the DIN jack: notes with velocity, pitch bend, CC 1, 74, 91 and 93, program
+        change. Velocity and aftertouch from the FM-1's own keys.</p></div>
+      <div><h3>What it keeps</h3><p>Its settings only: its sounds are built in, and it reads no other firmware's
+        projects or samples. Not there yet: the delay, and saving edited sounds.</p></div>
+    </div>
+  </section>
+
+  <footer>
+    <p>GPL-3.0-only, <a href="https://github.com/joakimeriksson/scintilla-fm1">source on GitHub</a>. Installing
+      firmware is at your own risk; OCT− held while switching on is the USB rescue, and the Firmware Hub takes the FM-1
+      back to any other firmware or the official one. Not affiliated with or endorsed by Elka, Generalmusic,
+      Behringer / Music Tribe or M-VAVE.</p>
+  </footer>
+</main>
+
+<script type="module">
+  // "Install Scintilla on my FM-1": the installer and the packages are on fm1-dock's site, the same origin
+  // (joakimeriksson.github.io); elsewhere (a local copy of the page) the button stays hidden
+  const el = document.getElementById("install");
+  import("/fm1-dock/install/fm1install.js")
+    .then(({ installButton }) => { installButton(el, "scintilla", { buttonClass: "btn" }); el.hidden = false; })
+    .catch(() => {});
+</script>
+</body>
+</html>

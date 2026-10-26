@@ -14,7 +14,8 @@ USB and DIN MIDI, USB audio, velocity and aftertouch from the FM-1's own keys (o
 fm1-emu.
 The delay is not there yet (see [PLAN.md](PLAN.md)); the reverb is an algorithmic one measured against the app's.
 
-**Get it:** the `.fwsc` from the [latest release](https://github.com/joakimeriksson/scintilla-fm1/releases/latest), installed with the
+**Get it:** [Install on my FM-1](https://joakimeriksson.github.io/scintilla-fm1/) on its page (over USB, in Chrome or
+Edge), or the `.fwsc` from the [latest release](https://github.com/joakimeriksson/scintilla-fm1/releases/latest), installed with the
 [FM-1 Firmware Hub](https://thefirmwarehub.com) or `firmware/tools/fm1_install.py scintilla-0.1.1.fwsc` (USB-MIDI).
 Hold **OCT-** while switching on for the USB rescue; the hub takes it back to the official firmware. The release
 also has a short video of it playing. Scintilla does not read other firmwares' projects or samples: its own 80
