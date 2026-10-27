@@ -212,8 +212,12 @@ void fm1_timer5_irq(void)
             uac_service();
         return;
     }
-    if (owed)
+    if (owed) {
         usb_poll();
+#ifdef APP_T5_POLL
+        APP_T5_POLL();                          /* the app's 2 kHz part (Scintilla: the DIN jack's UART) */
+#endif
+    }
     owed = 0;
 }
 extern void isr_timer5(void);
