@@ -33,6 +33,10 @@
 #else
 #define APP_EARLY_INIT din_init                 /* the DIN jack's UART, before platform.c starts the key scan */
 static void din_init(void);
+#ifndef DINGHY_HOST
+#define APP_T5_POLL din_poll                    /* TIMER5, 2 kHz: the DIN jack's UART latched */
+static void din_poll(void);
+#endif
 #ifndef DINGHY_HOST                             /* the key scan's analog rows: the keys' force (below) */
 #include <stdint.h>
 static void key_analog(uint32_t col, uint32_t rowbit, uint32_t v, uint32_t driven);
@@ -61,6 +65,14 @@ static void din_init(void)
     for (i = 0; i < DIN_RING; i++)
         din_ring[i] = 0xFFu;
     fm1_uart1_midi_init(din_ring, DIN_RING);
+}
+/* The UART latched (RDC) and its pendings cleared every TIMER5 poll, as Dinghy 0.4's midi_uart.c does
+ * (fm1_uart1_rx_take): fm1-dock, which did not, was reported lagging badly on notes from the jack where
+ * Dinghy's OberVave played them at once (fm1-emu cannot tell: its UART DMA writes each byte as it lands).
+ * The ring is still read by content, in the main loop (din_get). */
+static void din_poll(void)
+{
+    fm1_uart1_rx_take();
 }
 static int din_get(uint8_t *st, uint8_t *d1, uint8_t *d2)
 {
