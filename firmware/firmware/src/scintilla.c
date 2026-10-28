@@ -18,7 +18,7 @@
  *   ALGORITHM       the joystick left and right: LFO 2 into the pitch (left) or the filter (right)
  *   OCT- OCT+       the octave
  *   MIDI in         USB and the DIN jack, any channel: notes with velocity, pitch bend (2 semitones),
- *                   CC1 = the stick pushed left (vibrato, as on the Synthex), CC74 the cutoff,
+ *                   CC1 = the stick pushed left (vibrato, as on the Synthex), CC7 the volume, CC74 the cutoff,
  *                   CC91 the reverb's mix and CC93 the chorus's (0 turns it off), program change,
  *                   CC120/123, channel and poly pressure (aftertouch)
  *   aftertouch      the hardest press (a key's, or MIDI's) pushes the stick further left: vibrato, as CC1;
@@ -117,6 +117,7 @@ static sc_patch_t staged;                       /* a preset on its way in: the m
 static volatile uint32_t load_req, ready;       /* main -> ISR / ISR -> main */
 static sc_perf_t perf;                          /* the joystick section: not in the patch, kept across sounds */
 static volatile uint32_t cpu_pub;               /* the slowest render of the last second, in fm1_ticks */
+static volatile int32_t cc7_q12 = 4096;         /* MIDI CC 7, the level after the synth: (v / 127)^2, Q12 */
 #define BLOCK_TICKS (HALF_FRAMES * 1000000u / FS * FM1_TICKS_PER_US)   /* 5.8 ms of ticks: 100 % */
 
 static void app_audio(int32_t *out, uint32_t n)
@@ -134,6 +135,21 @@ static void app_audio(int32_t *out, uint32_t n)
         return;
     t0 = fm1_ticks();
     sc_render(&syn, out, n);
+    {
+        static int32_t was = 4096;              /* the last block's CC 7 level; a change is spread over the block */
+        int32_t g1 = cc7_q12;
+        if (g1 != 4096 || was != 4096) {        /* (at 127 the sound is the engine's, bit for bit) */
+            int32_t gq = was << 8, dg = ((g1 - was) << 8) / (int32_t)n, g;   /* gq: Q20 */
+            uint32_t i;
+            for (i = 0; i < n; i++) {
+                gq += dg;
+                g = i + 1u < n ? gq >> 8 : g1;
+                out[2u * i] = (out[2u * i] * g) >> 12;
+                out[2u * i + 1u] = (out[2u * i + 1u] * g) >> 12;
+            }
+            was = g1;
+        }
+    }
     dt = fm1_ticks() - t0;
     if (dt > worst) worst = dt;
     if (++blocks >= FS / HALF_FRAMES) { cpu_pub = worst; worst = 0; blocks = 0; }
@@ -721,6 +737,8 @@ static void app_loop(void)
             sc_post(&syn, SC_EV_ALL_OFF, 0, 0);
             for (k = 0; k < 128u; k++) sounding[k] = at_poly[k] = 0;
             at_chan = 0;
+        } else if (ty == 0xB0u && d1 == 7u) {                /* the volume: as the MIDI spec has it, 127 = as it was */
+            cc7_q12 = (int32_t)((d2 * d2 * 4096u + 8064u) / 16129u);
         }
     }
     aftertouch(keys);

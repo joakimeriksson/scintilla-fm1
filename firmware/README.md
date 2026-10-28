@@ -26,7 +26,7 @@ there, as a firmware of its own on [Dinghy](https://github.com/zvenson/dinghy) 0
 | **SELECT** | the joystick up and down: pitch bend (and the filter, by the BEND depths) |
 | **ALGORITHM** | the joystick left and right: LFO 2 into the pitch (left) or the filter (right) |
 | **OCT- OCT+** | the octave |
-| **MIDI in** | USB and the DIN jack, any channel: notes with velocity, pitch bend (2 semitones), CC1 = the stick pushed left (vibrato, as on the Synthex), CC74 the cutoff, CC91 the reverb's mix and CC93 the chorus's (0 turns it off), program change, CC120 / 123, channel and poly pressure |
+| **MIDI in** | USB and the DIN jack, any channel: notes with velocity, pitch bend (2 semitones), CC1 = the stick pushed left (vibrato, as on the Synthex), CC7 the volume, CC74 the cutoff, CC91 the reverb's mix and CC93 the chorus's (0 turns it off), program change, CC120 / 123, channel and poly pressure |
 | **The keys** | the bottom two rows are force sensed (Velo's sensing): how hard a key lands is its velocity, and pressing a held key harder is **aftertouch**: the stick pushed left, vibrato, springing back as you ease off (the screen's STICK X follows it). MIDI's pressure does the same; the keys send their notes and poly pressure out over USB. The top row plays at 100 |
 | **SETTINGS** | both are **off** at first (the keys play at 100, pressing harder does nothing), as some sounds are better without: TOUCH turns aftertouch on, DEPTH is how far the hardest press pushes the stick (100 %: all the way), FLOOR the pressure under which a key's is none (8: above a resting finger's noise), VELO turns velocity on. Kept in flash |
 | **USB audio** | class compliant, no driver: the computer records what the FM-1 plays (stereo, 44.1 or 48 kHz) |
