@@ -175,7 +175,7 @@ static const char *const L_WAVE[] = {"TRI", "SAW", "SQR", "SIN", "NOISE"};
 static const char *const L_OCT[] = {"16'", "8'", "4'", "2'", "1'"};
 static const char *const L_OFFON[] = {"OFF", "ON"};
 static const char *const L_FLT[] = {"LP24", "LP12", "BP12", "BP6", "HP12"};
-static const char *const L_LFO[] = {"TRI", "SQR", "S&H", "RND", "RAMP", "SQR+"};
+static const char *const L_LFO[] = {"TRI", "SQR", "S&H", "RND", "RAMP", "RAMP-", "SQR+"};
 static const char *const L_GLIDE[] = {"OFF", "GLIDE", "PORTA"};
 static const char *const L_KEYS[] = {"POLY", "MONO", "UNISON"};
 static const char *const L_CHO[] = {"OFF", "1", "2", "3"};
@@ -196,30 +196,34 @@ static set_t set;
 #define LIN(n, f, lo, hi, st, u) { n, W_LAYER, K_LIN, u, LO(f), NO_OFF, Q(lo), Q(hi), Q(st), 0 }
 #define EXP(n, f, lo, hi, u) { n, W_LAYER, K_EXP, u, LO(f), NO_OFF, Q(lo), Q(hi), Q(lo), 0 }
 #define ENUM(n, f, lo, hi, l) { n, W_LAYER, K_ENUM, U_NUM, LO(f), NO_OFF, lo, hi, 1, l }
-#define ADSR(e) EXP("ATTACK", e.a, 0.001, 5, U_SEC), EXP("DECAY", e.d, 0.001, 5, U_SEC), \
-                LIN("SUSTAIN", e.s, 0, 1, 0.01, U_NUM), EXP("RELEASE", e.r, 0.001, 5, U_SEC)
+#define ADSR(e) EXP("ATTACK", e.a, 0.001, 15, U_SEC), EXP("DECAY", e.d, 0.001, 15, U_SEC), \
+                LIN("SUSTAIN", e.s, 0, 1, 0.01, U_NUM), EXP("RELEASE", e.r, 0.001, 15, U_SEC)
 
+/* The ranges take in the Synthex's own (synthex-web's tools/synthex-rom/gen_factory.py maps the ROM
+ * presets' knobs to the engine): ENV +-3.08, cutoff -0.26..1.48 (the knob with the key tracking
+ * folded in; the engine clamps the note to 0..132), OSC2 detune +-1250 cents (the transposes folded
+ * in), envelope stages to 13.2 s, LFO 0.07..27.7 Hz, glide -32..31 st, 5 ms..1 s. */
 static const prm_t PAGE[][4] = {
-    { LIN("CUTOFF", cutoff, 0, 1, 0.01, U_NUM), LIN("RESO", reso, 0, 1, 0.01, U_NUM),
-      LIN("ENV", env_amt, -1, 1, 0.01, U_NUM), EXP("RELEASE", env_a.r, 0.001, 5, U_SEC) },
+    { LIN("CUTOFF", cutoff, -0.3, 1.5, 0.01, U_NUM), LIN("RESO", reso, 0, 1, 0.01, U_NUM),
+      LIN("ENV", env_amt, -3.1, 3.1, 0.01, U_NUM), EXP("RELEASE", env_a.r, 0.001, 15, U_SEC) },
     { ENUM("WAVE", o1_wave, 0, 4, L_WAVE), ENUM("OCTAVE", o1_oct, -2, 2, L_OCT),
       LIN("PW", o1_pwm, 0.05, 0.95, 0.01, U_NUM), LIN("LEVEL", mix_o1, 0, 1, 0.01, U_NUM) },
     { ENUM("WAVE", o2_wave, 0, 4, L_WAVE), ENUM("OCTAVE", o2_oct, -2, 2, L_OCT),
-      LIN("DETUNE", o2_detune, -1200, 1200, 1, U_CENT), LIN("LEVEL", mix_o2, 0, 1, 0.01, U_NUM) },
+      LIN("DETUNE", o2_detune, -1250, 1250, 1, U_CENT), LIN("LEVEL", mix_o2, 0, 1, 0.01, U_NUM) },
     { LIN("NOISE", mix_noise, 0, 1, 0.01, U_NUM), ENUM("SYNC", o2_sync, 0, 1, L_OFFON),
       ENUM("RING", ring, 0, 1, L_OFFON), LIN("X-MOD", cross, 0, 1, 0.01, U_NUM) },
-    { ENUM("MODE", flt_mode, 0, 4, L_FLT), LIN("CUTOFF", cutoff, 0, 1, 0.01, U_NUM),
-      LIN("ENV", env_amt, -1, 1, 0.01, U_NUM), LIN("KEYS", key_track, 0, 1, 0.01, U_NUM) },
+    { ENUM("MODE", flt_mode, 0, 4, L_FLT), LIN("CUTOFF", cutoff, -0.3, 1.5, 0.01, U_NUM),
+      LIN("ENV", env_amt, -3.1, 3.1, 0.01, U_NUM), LIN("KEYS", key_track, 0, 1, 0.01, U_NUM) },
     { ADSR(env_f) },
     { ADSR(env_a) },
-    { EXP("RATE", lfo[0].rate, 0.05, 20, U_HZ), ENUM("SHAPE", lfo[0].shape, 0, 5, L_LFO),
+    { EXP("RATE", lfo[0].rate, 0.05, 30, U_HZ), ENUM("SHAPE", lfo[0].shape, 0, 6, L_LFO),
       { "PITCH", W_LAYER, K_LIN, U_NUM, LO(mm[SC_MM_L1_P1]), LO(mm[SC_MM_L1_P2]), 0, Q(1), Q(0.01), 0 },
       LIN("CUTOFF", mm[SC_MM_L1_CUT], 0, 1, 0.01, U_NUM) },
-    { EXP("RATE", lfo[1].rate, 0.05, 20, U_HZ), ENUM("SHAPE", lfo[1].shape, 0, 5, L_LFO),
+    { EXP("RATE", lfo[1].rate, 0.05, 30, U_HZ), ENUM("SHAPE", lfo[1].shape, 0, 6, L_LFO),
       { "PITCH", W_PERF, K_LIN, U_NUM, FO(lfo2_osc), NO_OFF, 0, Q(1), Q(0.01), 0 },
       { "CUTOFF", W_PERF, K_LIN, U_NUM, FO(lfo2_filt), NO_OFF, 0, Q(1), Q(0.01), 0 } },
-    { ENUM("MODE", glide_mode, 0, 2, L_GLIDE), LIN("AMOUNT", glide_amt, -24, 24, 1, U_ST),
-      EXP("SPEED", glide_time, 0.01, 10, U_SEC), ENUM("KEYS", key_assign, 0, 2, L_KEYS) },
+    { ENUM("MODE", glide_mode, 0, 2, L_GLIDE), LIN("AMOUNT", glide_amt, -32, 31, 1, U_ST),
+      EXP("SPEED", glide_time, 0.005, 10, U_SEC), ENUM("KEYS", key_assign, 0, 2, L_KEYS) },
     { { "TOUCH", W_SET, K_ENUM, U_NUM, SO(at_on), NO_OFF, 0, 1, 1, L_OFFON },
       { "DEPTH", W_SET, K_INT, U_PCT, SO(at_depth), NO_OFF, 0, 100, 1, 0 },
       { "FLOOR", W_SET, K_INT, U_NUM, SO(at_floor), NO_OFF, 0, 40, 1, 0 },

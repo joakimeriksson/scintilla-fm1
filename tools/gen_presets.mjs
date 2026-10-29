@@ -13,7 +13,7 @@ const here = dirname(fileURLToPath(import.meta.url))
 
 const WAVE = ['triangle', 'sawtooth', 'square', 'sine', 'noise']
 const FLT = ['lp24', 'lp12', 'bp12', 'bp6', 'hp12']
-const LFO = ['tri', 'square', 'sample-hold', 'random', 'ramp', 'square-uni']
+const LFO = ['tri', 'square', 'sample-hold', 'random', 'ramp', 'ramp-down', 'square-uni']
 const GLIDE = ['off', 'glide', 'portamento']
 const KEY = ['poly', 'mono', 'unison']
 const VM = ['single', 'split', 'double']

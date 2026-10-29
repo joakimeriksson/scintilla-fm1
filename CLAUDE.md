@@ -15,7 +15,8 @@ the host build's. A mismatch is a bug (in the engine, the compiler or the emulat
 
 ## Verified
 
-- Level within 0.21 dB, spectrum median 0.02 dB, on 80 patches x 4 scenarios (2026-10-21).
+- Level within 0.09 dB, spectrum median 0.01 dB, on 80 patches x 4 scenarios (2026-10-29, after the ROM
+  bank's calibration: inverted cutoff pot, measured LFO curve and depths, attack / 2, exponential release).
 - The staged render (block passes) equals the per-sample one (`render_general`) bit for bit on every preset:
   `tests/run.sh` builds both (`-DSX_TEST_GENERAL`) and `cmp`s them.
 - FM-1 output = host output, all bench configs, with fm1-emu master of 2026-10-19.
@@ -28,8 +29,9 @@ the host build's. A mismatch is a bug (in the engine, the compiler or the emulat
 - A silent voice stops its 128-sample coefficient clock at the start of a run, not mid-run, so the length of the
   runs it is given is part of what it plays (the next note's first filter update moves). The app gives it 128
   (the AudioWorklet quantum); both test renderers cut runs at 128 to match. The FM-1 gives it 256.
-- `mix.crossMod2` (OSC2 -> OSC1 PWM) is in no factory patch, so `render_general`, the only path that plays it,
-  is never compared with VoiceCore. Test it (a scenario that sets a parameter) before trusting it.
+- `mix.crossMod2` (OSC2 -> OSC1 PWM) is played only by `render_general`, the per-sample path. Since the ROM bank
+  (2026-10-29) three presets use it (Fat Sound, Metallic, Landing), so `tests/run.sh` compares it with VoiceCore;
+  it costs: Metallic's 8 voices take 52.7 % of a core (fm1/run.py), the most of any preset benched.
 
 ## Deliberate differences
 
@@ -56,6 +58,13 @@ the host build's. A mismatch is a bug (in the engine, the compiler or the emulat
 
 ## Gotchas that cost time
 
+- **A 0.055 % constant is a bug when a parameter can be 1200.** Cents -> semitones used 655/65536 for 0.01;
+  the ROM presets fold OSC2's 12-semitone transpose into its detune as 1200 cents, so OSC2 played 0.66 cents
+  flat and every 1' / 2' preset beat against the reference (24 pairs failed, snr -3 dB). Now 0.01 in Q32.
+- **The release is exponential** (VoiceCore's Adsr since 2026-10-29: a factor 10 per `r` seconds, idle at
+  1e-4): one Q30 multiply per sample, the multiplier from `sc_exp_neg_inv`. `env_skip` steps the release
+  sample by sample (one multiply each) because the per-sample truncation cannot be jumped and the staged
+  render must stay bit-equal to the general one.
 - **Headroom after the voices.** A layer's bus (the voices summed, before the volume) passes 1.0 on loud chords
   (Brass I's stabs: 1.8). The chorus line was int16 Q15, clamped at 1.0: its wet half clipped 20 dB under the
   signal on every attack (found by ear in the video, 2026-10-22). Anything that stores the bus keeps Q20 in int32.

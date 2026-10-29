@@ -8,7 +8,8 @@ as an engine for the **M-VAVE FM-1** pocket synth: fixed-point C for its JieLi A
 ([fm1-emu](https://github.com/joakimeriksson/fm1-emu)).
 
 **Status: 0.1.1, runs on the FM-1.** The engine plays all 80 factory patches (the 40 PRESETS and 40 MEMORIES,
-Paul Wiffen's Laser Harp "Ring mod." among them) on this computer and on the emulated FM-1, with the same bits on
+Paul Wiffen's Laser Harp "Ring mod." among them; the PRESETS with the values synthex-web decoded from the
+Synthex's own EPROMs) on this computer and on the emulated FM-1, with the same bits on
 both. [`firmware/`](firmware) makes it a firmware of its own on Dinghy: the keys, the knobs and pages, the screen,
 USB and DIN MIDI, USB audio, velocity and aftertouch from the FM-1's own keys (on its SETTINGS page), installable as `scintilla.fwsc`. Installed and played on a real FM-1 (2026-10-23); every check in the tests runs in
 fm1-emu.
@@ -37,7 +38,7 @@ sounds are built in, and it keeps only its settings. It reports the identity `FM
 ## How close it is
 
 `tests/run.sh` renders each of the 80 patches through four scenarios (a held note, a phrase, the joystick, chords)
-in VoiceCore and in the C engine: **level within 0.21 dB everywhere (median 0.001 dB), spectrum within 0.03 dB
+in VoiceCore and in the C engine: **level within 0.1 dB everywhere (median 0.001 dB), spectrum within 0.02 dB
 (median)**. The few with larger spectral differences are within the reference's own floor: VoiceCore seeds one noise
 oscillator at random, and hard sync turns a 0.00005-semitone pitch difference into a different waveform, so the test
 renders the reference twice (the second nudged by that much) and holds the C engine to that floor.
@@ -49,14 +50,16 @@ FM-1's output bit-identical to the host's:
 
 | patch | voices | % of a core |
 | --- | ---: | ---: |
-| Chunky Synth (2 saws, 24 dB) | 8 | 20 % |
-| Chunky Synth, both layers | 16 | 38 % |
-| Brushed Cymbals (noise) | 8 | 20 % |
+| Chunky Synth (2 saws, 24 dB) | 8 | 19 % |
+| Chunky Synth, both layers | 16 | 36 % |
+| Brushed Cymbals (noise) | 8 | 24 % |
 | Sync. Harmonic Sweep | 8 | 34 % |
-| Ring mod. (the Laser Harp: sync, ring, cross mod, PWM, glide) | 8 | 49 % |
+| Ring mod. (the Laser Harp: sync, ring, cross mod, PWM, glide) | 8 | 48 % |
+| Fat Sound (OSC2 -> OSC1 PWM: the per-sample path) | 8 | 48 % |
+| Metallic (the same, with sync and glide) | 8 | 53 % |
 
 Instructions are a lower bound on cycles (flash loads and divides take longer). FM-1 firmwares aim to stay under half
-of a core.
+of a core; Metallic's eight voices go a little over.
 
 ## Running it
 
