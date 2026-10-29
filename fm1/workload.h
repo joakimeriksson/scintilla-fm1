@@ -23,6 +23,9 @@ static const wl_config_t WL[] = {
     { "Sync. Harmonic Sweep",       41, 8, 0 },
     { "Brushed Cymbals: noise",     58, 8, 0 },
     { "Chunky Synth, both layers",  0, 8, 1 },
+    { "Fat Sound: OSC2->OSC1 PWM",   2, 8, 0 },
+    { "Metallic: + sync, glide",     3, 8, 0 },
+    { "Landing",                    33, 8, 0 },
 };
 #define WL_N ((int)(sizeof WL / sizeof WL[0]))
 
