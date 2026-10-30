@@ -15,10 +15,15 @@ the host build's. A mismatch is a bug (in the engine, the compiler or the emulat
 
 ## Verified
 
+- 2026-10-31, after the Take-off click (cutoff tracking, no phase reset on a sounding voice, Take-off's filter
+  envelope corrected in synthex-web's bank): level within 0.13 dB, spectrum median 0.02 dB, 320 pairs inside the
+  limits; staged = per-sample on every preset and on `tests/lfo_cut.c`; FM-1 = host on all eleven bench configs.
+  Cost: Chunky x8 18.8 -> 19.6 %, Ring mod. 47.6 -> 49.4 %, Metallic 52.7 -> 53.9 %, Landing 51.7 -> 52.8 %.
 - Level within 0.09 dB, spectrum median 0.01 dB, on 80 patches x 4 scenarios (2026-10-29, after the ROM
   bank's calibration: inverted cutoff pot, measured LFO curve and depths, attack / 2, exponential release).
 - The staged render (block passes) equals the per-sample one (`render_general`) bit for bit on every preset:
-  `tests/run.sh` builds both (`-DSX_TEST_GENERAL`) and `cmp`s them.
+  `tests/run.sh` builds both (`-DSC_TEST_GENERAL`) and `cmp`s them. Only since 2026-10-31: until then run.sh
+  defined `SX_TEST_GENERAL`, which nothing reads, so it compared the staged render with itself.
 - FM-1 output = host output, all bench configs, with fm1-emu master of 2026-10-19.
 
 ## Ported faithfully, though they look like bugs (fix them in synthex-web first, then here)
@@ -29,12 +34,23 @@ the host build's. A mismatch is a bug (in the engine, the compiler or the emulat
 - A silent voice stops its 128-sample coefficient clock at the start of a run, not mid-run, so the length of the
   runs it is given is part of what it plays (the next note's first filter update moves). The app gives it 128
   (the AudioWorklet quantum); both test renderers cut runs at 128 to match. The FM-1 gives it 256.
+- Since 2026-10-30 (the Take-off click) VoiceCore also recomputes the coefficients mid-block as soon as the cutoff
+  has moved half a semitone (`CUTOFF_STEP`), and resets the oscillator phases only when the voice starts from
+  silence. The C evaluates the cutoff only on the samples where it can have moved that far: the staged render per
+  sample while an LFO or the portamento drives it, and by bisection over the block's envelope values while only
+  the filter envelope does (the cutoff is monotone between the attack's peak and the next stage; `first_cross`);
+  the per-sample path skips ahead by the largest step the envelope and the LFOs can take (`cut_eval`,
+  `lfo_cut_dmax`: a 0.17 Hz LFO is looked at every ~1000 samples, not every one). Both update on the same
+  samples, which keeps them bit-equal; `tests/lfo_cut.c` checks the LFO bound on every shape, and fails when it
+  is halved.
 - `mix.crossMod2` (OSC2 -> OSC1 PWM) is played only by `render_general`, the per-sample path. Since the ROM bank
   (2026-10-29) three presets use it (Fat Sound, Metallic, Landing), so `tests/run.sh` compares it with VoiceCore;
-  it costs: Metallic's 8 voices take 52.7 % of a core (fm1/run.py), the most of any preset benched.
+  it costs: Metallic's 8 voices take 53.9 % of a core (fm1/run.py), the most of any preset benched.
 
 ## Deliberate differences
 
+- A stick move or patch edit mid-note (a new `sc_prep_t`) reaches the cutoff at the next block start, where
+  VoiceCore's per-sample evaluation would catch it within half a semitone on the next sample: up to 2.9 ms.
 - Aftertouch and velocity from the keys are off until SETTINGS (GLO twice) turns them on: vibrato does not suit
   every sound (Laser Harp's), so out of the box the FM-1 plays as 0.1 did.
 - Aftertouch (the firmware's, not the engine's): VoiceCore has none, nor had the Synthex. The firmware turns the

@@ -26,6 +26,7 @@ static const wl_config_t WL[] = {
     { "Fat Sound: OSC2->OSC1 PWM",   2, 8, 0 },
     { "Metallic: + sync, glide",     3, 8, 0 },
     { "Landing",                    33, 8, 0 },
+    { "Take-off: HP12 sweep",        32, 8, 0 },
 };
 #define WL_N ((int)(sizeof WL / sizeof WL[0]))
 
