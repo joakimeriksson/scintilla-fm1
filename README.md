@@ -55,8 +55,8 @@ FM-1's output bit-identical to the host's:
 | Brushed Cymbals (noise) | 8 | 25 % |
 | Sync. Harmonic Sweep | 8 | 35 % |
 | Ring mod. (the Laser Harp: sync, ring, cross mod, PWM, glide) | 8 | 49 % |
-| Fat Sound (OSC2 -> OSC1 PWM: the per-sample path) | 8 | 49 % |
-| Metallic (the same, with sync and glide) | 8 | 54 % |
+| Fat Sound (OSC2 -> OSC1 PWM: the per-sample path) | 8 | 51 % |
+| Metallic (the same, with sync and glide) | 8 | 55 % |
 | Landing (the per-sample path, an LFO on the cutoff) | 8 | 53 % |
 | Take-off (HP12, its filter envelope sweeping) | 8 | 35 % |
 

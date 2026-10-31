@@ -15,6 +15,10 @@ the host build's. A mismatch is a bug (in the engine, the compiler or the emulat
 
 ## Verified
 
+- 2026-10-31, with the 1.5 ms amp gate (`SC_AMP_ONSET_DELAY`): level within 0.05 dB, spectrum median 0.02 dB,
+  320 pairs inside the limits; staged = per-sample on every preset and on `tests/lfo_cut.c`; FM-1 = host on all
+  eleven bench configs. Cost: Fat Sound 49.7 -> 50.7 %, Metallic 53.9 -> 54.8 %, Landing 52.8 -> 53.3 %,
+  Take-off 34.8 -> 35.1 % (the gate's test in the per-sample loop).
 - 2026-10-31, after the Take-off click (cutoff tracking, no phase reset on a sounding voice, Take-off's filter
   envelope corrected in synthex-web's bank): level within 0.13 dB, spectrum median 0.02 dB, 320 pairs inside the
   limits; staged = per-sample on every preset and on `tests/lfo_cut.c`; FM-1 = host on all eleven bench configs.
@@ -36,7 +40,8 @@ the host build's. A mismatch is a bug (in the engine, the compiler or the emulat
   (the AudioWorklet quantum); both test renderers cut runs at 128 to match. The FM-1 gives it 256.
 - Since 2026-10-30 (the Take-off click) VoiceCore also recomputes the coefficients mid-block as soon as the cutoff
   has moved half a semitone (`CUTOFF_STEP`), and resets the oscillator phases only when the voice starts from
-  silence. The C evaluates the cutoff only on the samples where it can have moved that far: the staged render per
+  silence; since 2026-10-31 it also starts the amp envelope 1.5 ms after the filter envelope (`AMP_ONSET_DELAY`:
+  the `amp_gate` countdown here, and `sc_voice_idle` is false while it runs). The C evaluates the cutoff only on the samples where it can have moved that far: the staged render per
   sample while an LFO or the portamento drives it, and by bisection over the block's envelope values while only
   the filter envelope does (the cutoff is monotone between the attack's peak and the next stage; `first_cross`);
   the per-sample path skips ahead by the largest step the envelope and the LFOs can take (`cut_eval`,
