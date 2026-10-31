@@ -15,6 +15,11 @@ the host build's. A mismatch is a bug (in the engine, the compiler or the emulat
 
 ## Verified
 
+- 2026-10-31, after the oscillators' band-limited sync and the phase-derived triangle (Metallic): level within
+  0.04 dB, spectrum median 0.02 dB, 320 pairs inside the limits; staged = per-sample on every preset and on
+  `tests/lfo_cut.c`; FM-1 = host on all eleven bench configs. Cost: Chunky x8 19.6 -> 19.3 %, Ring mod. 49.2 ->
+  51.8 %, Sync sweep 34.8 -> 37.0 %, Fat Sound 50.7 -> 53.7 %, Metallic 54.8 -> 57.8 %, Landing 53.3 -> 56.7 %
+  (the synced slave's two-sided residuals, and the per-sample path's square without the old one-call blep).
 - 2026-10-31, with the 1.5 ms amp gate (`SC_AMP_ONSET_DELAY`): level within 0.05 dB, spectrum median 0.02 dB,
   320 pairs inside the limits; staged = per-sample on every preset and on `tests/lfo_cut.c`; FM-1 = host on all
   eleven bench configs. Cost: Fat Sound 49.7 -> 50.7 %, Metallic 53.9 -> 54.8 %, Landing 52.8 -> 53.3 %,
@@ -48,6 +53,15 @@ the host build's. A mismatch is a bug (in the engine, the compiler or the emulat
   `lfo_cut_dmax`: a 0.17 Hz LFO is looked at every ~1000 samples, not every one). Both update on the same
   samples, which keeps them bit-equal; `tests/lfo_cut.c` checks the LFO bound on every shape, and fails when it
   is halved.
+- Since 2026-10-31 the oscillators are VoiceCore's `SyncedOsc`: hard sync restarts the slave (1 - tau) dt into
+  its cycle, tau being how far after the sample OSC1 wrapped (`wrap_tau`; `S_wrap` carries it per sample in the
+  staged render), and spreads the restart's step and slope change over the two samples around it with the
+  PolyBLEP / PolyBLAMP residuals (`sync_now`, `blep_before/after`, `blamp_before/after`; `sc_osc_t.pend / after`
+  carry the second sample's share). The triangle is `1 - 4 |phase - 1/2|` with BLAMP corners (`tri_at`), no
+  longer an integrated square: that one bent instead of stepping at a sync and drifted to a DC offset of
+  several times the signal on Metallic. `osc_reset` must run at init (tau = -1 means no sync pending).
+- Since 2026-10-31 Q = 0.5 + 2.2 r^0.75 + 22 r^8 (`sqrt16`, an integer square root, for the 0.75 power), as
+  VoiceCore's `updateCoeffs`: the recording's resonant peaks are 5-10 dB at mid settings.
 - `mix.crossMod2` (OSC2 -> OSC1 PWM) is played only by `render_general`, the per-sample path. Since the ROM bank
   (2026-10-29) three presets use it (Fat Sound, Metallic, Landing), so `tests/run.sh` compares it with VoiceCore;
   it costs: Metallic's 8 voices take 53.9 % of a core (fm1/run.py), the most of any preset benched.
