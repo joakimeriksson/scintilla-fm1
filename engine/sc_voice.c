@@ -448,7 +448,7 @@ void sc_voice_note_on(sc_voice_t *v, const sc_prep_t *p, int32_t note, int32_t v
     v->target = (int64_t)note << 32;
     if (!(L->glide_mode == SC_GLIDE_PORTA && !from_idle)) v->cur = v->target;
     v->vel = vel_q16;
-    if (from_idle || L->multi_trigger) { v->env1.stage = ENV_ATTACK; v->env2.stage = ENV_ATTACK; }
+    if (from_idle || L->multi_trigger) { v->env1.stage = ENV_ATTACK; v->amp_gate = SC_AMP_ONSET_DELAY; }
     if (L->lfo[0].sync) lfo_trigger(&v->lfo1);
     if (L->lfo[1].sync) lfo_trigger(&v->lfo2);
     if (from_idle) {                            /* a sounding voice keeps its phases: a reset is a step */
@@ -469,6 +469,7 @@ void sc_voice_note_on(sc_voice_t *v, const sc_prep_t *p, int32_t note, int32_t v
 void sc_voice_note_off(sc_voice_t *v, const sc_prep_t *p)
 {
     env_off(&v->env1, p->fr_mul);
+    if (v->amp_gate) { v->amp_gate = 0; v->env2.stage = ENV_ATTACK; }   /* a note shorter than the delay */
     env_off(&v->env2, p->ar_mul);
 }
 
@@ -612,6 +613,7 @@ static void render_general(sc_voice_t *v, const sc_prep_t *p, int32_t *out, uint
 
         if (v->cur != v->target)                /* Q30 coefficient x the distance in Q24 -> Q32 */
             v->cur += ((int64_t)p->glide_coef * (int32_t)((v->target - v->cur) >> 8)) >> 22;
+        if (v->amp_gate && --v->amp_gate == 0) v->env2.stage = ENV_ATTACK;
 
         int32_t e1 = env_step(&v->env1, p->fa_inc, p->fd_inc, p->fs);
         int32_t e2 = env_step(&v->env2, p->aa_inc, p->ad_inc, p->as);
@@ -863,7 +865,7 @@ static void mix_run(sc_voice_t *v, int mode, const mix_t *m, const int32_t *c, i
 
 void sc_voice_render(sc_voice_t *v, const sc_prep_t *p, int32_t *out, uint32_t n)
 {
-    if (v->env2.stage == ENV_IDLE) return;
+    if (v->env2.stage == ENV_IDLE && !v->amp_gate) return;
 #ifndef SC_TEST_GENERAL                         /* tests/run.sh: the general path for every patch */
     if (p->cross2 || n > 256)
 #endif
@@ -895,7 +897,17 @@ void sc_voice_render(sc_voice_t *v, const sc_prep_t *p, int32_t *out, uint32_t n
         uint32_t i1 = i0 + m;
         v->block = (v->block + m) % SC_COEFF_BLOCK;
 
-        env_run(&v->env2, p->aa_inc, p->ad_inc, p->as, S_amp + i0, m);
+        /* the amp envelope, silent until its gate (and a release it was retriggered in goes on) */
+        if (v->amp_gate) {
+            uint32_t z = v->amp_gate - 1;       /* samples before the gate opens */
+            if (z > m) z = m;
+            if (v->env2.stage == ENV_IDLE) for (uint32_t i = i0; i < i0 + z; i++) S_amp[i] = 0;
+            else env_run(&v->env2, p->aa_inc, p->ad_inc, p->as, S_amp + i0, z);
+            v->amp_gate -= z;
+            if (v->amp_gate == 1) { v->amp_gate = 0; v->env2.stage = ENV_ATTACK; }
+            if (z < m) env_run(&v->env2, p->aa_inc, p->ad_inc, p->as, S_amp + i0 + z, m - z);
+        } else
+            env_run(&v->env2, p->aa_inc, p->ad_inc, p->as, S_amp + i0, m);
 
         /* the filter envelope: per sample when something reads it per sample (OSC2's pitch, or the
          * cutoff while it moves), else skipped in one jump */
