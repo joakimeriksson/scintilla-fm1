@@ -53,15 +53,16 @@ FM-1's output bit-identical to the host's:
 | Chunky Synth (2 saws, 24 dB) | 8 | 20 % |
 | Chunky Synth, both layers | 16 | 38 % |
 | Brushed Cymbals (noise) | 8 | 25 % |
-| Sync. Harmonic Sweep | 8 | 35 % |
-| Ring mod. (the Laser Harp: sync, ring, cross mod, PWM, glide) | 8 | 49 % |
-| Fat Sound (OSC2 -> OSC1 PWM: the per-sample path) | 8 | 51 % |
-| Metallic (the same, with sync and glide) | 8 | 55 % |
-| Landing (the per-sample path, an LFO on the cutoff) | 8 | 53 % |
+| Sync. Harmonic Sweep | 8 | 37 % |
+| Ring mod. (the Laser Harp: sync, ring, cross mod, PWM, glide) | 8 | 52 % |
+| Fat Sound (OSC2 -> OSC1 PWM: the per-sample path) | 8 | 54 % |
+| Metallic (the same, with sync and glide) | 8 | 58 % |
+| Landing (the per-sample path, an LFO on the cutoff) | 8 | 57 % |
 | Take-off (HP12, its filter envelope sweeping) | 8 | 35 % |
 
 Instructions are a lower bound on cycles (flash loads and divides take longer). FM-1 firmwares aim to stay under half
-of a core; Metallic's and Landing's eight voices go a little over.
+of a core; Ring mod.'s, Fat Sound's, Metallic's and Landing's eight voices go over it (the band-limited sync and
+the per-sample path's cross-mod).
 
 ## Running it
 
