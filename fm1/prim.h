@@ -40,7 +40,7 @@ static uint32_t p_coeffs(void)
     p.k_q28 = (int32_t)(rnd() % (1u << 29)) + (1 << 24);
     v.env1.level = (int32_t)(rnd() >> 2);
     v.cur = (int64_t)(rnd() % 128u) << 32;
-    update_coeffs(&v, &p);
+    update_coeffs(&v, &p, cutoff_note(&v, &p, v.env1.level, 0, 0, (int32_t)(v.cur >> 16)));
     return (uint32_t)v.a1 ^ ((uint32_t)v.a2 << 7) ^ ((uint32_t)v.a3 << 13);
 }
 

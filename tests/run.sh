@@ -9,7 +9,12 @@ set -e
 cd "$(dirname "$0")/.."
 mkdir -p build
 cc -O2 -Wall -Wextra -Wno-unused-function -o build/sc_render host/sc_render.c engine/sc_voice.c engine/sc_synth.c -lm
-cc -O2 -Wno-unused-function -DSX_TEST_GENERAL -o build/sc_render_general host/sc_render.c engine/sc_voice.c engine/sc_synth.c -lm
+cc -O2 -Wno-unused-function -DSC_TEST_GENERAL -o build/sc_render_general host/sc_render.c engine/sc_voice.c engine/sc_synth.c -lm
+# the per-sample path's skipped samples (cut_eval) against the staged render, over every LFO shape on the cutoff
+cc -O2 -Wall -Wextra -Wno-unused-function -o build/lfo_cut tests/lfo_cut.c engine/sc_voice.c engine/sc_synth.c -lm
+cc -O2 -Wno-unused-function -DSC_TEST_GENERAL -o build/lfo_cut_general tests/lfo_cut.c engine/sc_voice.c engine/sc_synth.c -lm
+./build/lfo_cut > build/lfo_cut.txt
+./build/lfo_cut_general | cmp -s - build/lfo_cut.txt || { echo "staged != general: tests/lfo_cut.c"; exit 1; }
 n=$(./build/sc_render list | wc -l | tr -d ' ')
 for sc in tests/scenarios/*.txt; do
     name=$(basename "$sc" .txt)
