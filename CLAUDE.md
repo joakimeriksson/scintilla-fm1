@@ -60,6 +60,8 @@ the host build's. A mismatch is a bug (in the engine, the compiler or the emulat
   carry the second sample's share). The triangle is `1 - 4 |phase - 1/2|` with BLAMP corners (`tri_at`), no
   longer an integrated square: that one bent instead of stepping at a sync and drifted to a DC offset of
   several times the signal on Metallic. `osc_reset` must run at init (tau = -1 means no sync pending).
+- `-DSC_SMALL_OSC` (fm1-dock's module) builds the staged oscillators' synced loop for every oscillator and keeps
+  the per-sample ones out of line: the same samples, a few KB less code; the SMK-37's flash map needs it.
 - Since 2026-10-31 Q = 0.5 + 2.2 r^0.75 + 22 r^8 (`sqrt16`, an integer square root, for the 0.75 power), as
   VoiceCore's `updateCoeffs`: the recording's resonant peaks are 5-10 dB at mid settings.
 - `mix.crossMod2` (OSC2 -> OSC1 PWM) is played only by `render_general`, the per-sample path. Since the ROM bank
