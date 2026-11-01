@@ -10,6 +10,9 @@ cd "$(dirname "$0")/.."
 mkdir -p build
 cc -O2 -Wall -Wextra -Wno-unused-function -o build/sc_render host/sc_render.c engine/sc_voice.c engine/sc_synth.c -lm
 cc -O2 -Wno-unused-function -DSC_TEST_GENERAL -o build/sc_render_general host/sc_render.c engine/sc_voice.c engine/sc_synth.c -lm
+# the 64 / 32 division with two hardware divides, bit for bit the bit loop's (sc_fixed.h)
+cc -O2 -Wall -Wextra -o build/udiv tests/udiv.c
+./build/udiv
 # the per-sample path's skipped samples (cut_eval) against the staged render, over every LFO shape on the cutoff
 cc -O2 -Wall -Wextra -Wno-unused-function -o build/lfo_cut tests/lfo_cut.c engine/sc_voice.c engine/sc_synth.c -lm
 cc -O2 -Wno-unused-function -DSC_TEST_GENERAL -o build/lfo_cut_general tests/lfo_cut.c engine/sc_voice.c engine/sc_synth.c -lm
