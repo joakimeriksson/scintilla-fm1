@@ -618,26 +618,48 @@ static inline int cutoff_moved(const sc_voice_t *v, int32_t cn)
     return d > SC_CUTOFF_STEP || d < -SC_CUTOFF_STEP;
 }
 
+/* The cutoff while only the filter envelope moves it: cutoff_note's other terms summed once (the
+ * same int64 sum, so the same value), the envelope's two added per sample */
+typedef struct { int64_t base; int32_t ke, ke1; } env_cut_t;
+static inline env_cut_t env_cut(const sc_voice_t *v, const sc_prep_t *p, int32_t key_q16)
+{
+    env_cut_t c;
+    c.base = p->c_base + (((int64_t)(v->vel - SC_ONE16 / 2) * p->kc_vel) >> 16)
+           + (((int64_t)(key_q16 - (60 << 16)) * p->kc_key) >> 16);
+    c.ke = p->kc_env;
+    c.ke1 = p->kc_env1;
+    return c;
+}
+static inline int32_t env_cut_at(const env_cut_t *c, int32_t e1)
+{
+    int64_t x = c->base + (((int64_t)e1 * c->ke) >> 30) + (((int64_t)(e1 - SC_ONE30 / 2) * c->ke1) >> 30);
+    return x < 0 ? 0 : x > (132 << 16) ? (132 << 16) : (int32_t)x;
+}
+
 /* The first sample in [a, b) on which the cutoff, moved by the filter envelope e1[] alone, has
- * crossed the step from the coefficients' note, or b. Over [a, b) the cutoff is monotone and it was
- * within the step at a - 1, so the crossing is found by a search: galloping from a (a fast filter
- * attack crosses at the very next sample, a slow decay hundreds later), then bisection. */
-static uint32_t first_cross(const sc_voice_t *v, const sc_prep_t *p, const int32_t *e1, int32_t key,
-                            uint32_t a, uint32_t b)
+ * crossed the step from the coefficients' note, or b; *cn: the cutoff there. Over [a, b) the cutoff
+ * is monotone and it was within the step at a - 1, so the crossing is found by a search: galloping
+ * from a (a fast filter attack crosses at the very next sample, a slow decay hundreds later), then
+ * bisection. */
+static inline uint32_t first_cross(const sc_voice_t *v, const env_cut_t *c, const int32_t *e1,
+                                   uint32_t a, uint32_t b, int32_t *cn)
 {
     if (a >= b) return b;
     uint32_t lo = a, hi = a, step = 1;          /* not moved before lo; hi: the probe */
-    while (!cutoff_moved(v, cutoff_note(v, p, e1[hi], 0, 0, key))) {
+    int32_t x;
+    while (!cutoff_moved(v, x = env_cut_at(c, e1[hi]))) {
         if (hi == b - 1) return b;
         lo = hi + 1;
         hi = b - 1 - hi > step ? hi + step : b - 1;
         step *= 2;
     }
-    while (lo < hi) {                           /* moved at hi, not before lo */
+    while (lo < hi) {                           /* moved at hi (x), not before lo */
         uint32_t mid = (lo + hi) / 2;
-        if (cutoff_moved(v, cutoff_note(v, p, e1[mid], 0, 0, key))) hi = mid;
+        int32_t y = env_cut_at(c, e1[mid]);
+        if (cutoff_moved(v, y)) { hi = mid; x = y; }
         else lo = mid + 1;
     }
+    *cn = x;
     return lo;
 }
 
@@ -1174,15 +1196,16 @@ void sc_voice_render(sc_voice_t *v, const sc_prep_t *p, int32_t *out, uint32_t n
                 }
             }
         } else if (track_env) {
+            const env_cut_t ec = env_cut(v, p, key_c);
             uint32_t a = i0;
             for (int piece = 0; piece < 2 && a < i1; piece++) {
                 uint32_t b = piece == 0 ? i0 + j_peak : i1;
-                int32_t cn = cutoff_note(v, p, S_e1[a], 0, 0, key_c);
+                int32_t cn = env_cut_at(&ec, S_e1[a]);
                 if ((block_start && a == i0) || cutoff_moved(v, cn)) { update_coeffs(v, p, cn); NEW_SEG(a); }
                 for (uint32_t i = a + 1; i < b; i++) {
-                    i = first_cross(v, p, S_e1, key_c, i, b);
+                    i = first_cross(v, &ec, S_e1, i, b, &cn);
                     if (i == b) break;
-                    update_coeffs(v, p, cutoff_note(v, p, S_e1[i], 0, 0, key_c));
+                    update_coeffs(v, p, cn);
                     NEW_SEG(i);
                 }
                 a = b;
