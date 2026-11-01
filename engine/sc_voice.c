@@ -620,13 +620,20 @@ static inline int cutoff_moved(const sc_voice_t *v, int32_t cn)
 
 /* The first sample in [a, b) on which the cutoff, moved by the filter envelope e1[] alone, has
  * crossed the step from the coefficients' note, or b. Over [a, b) the cutoff is monotone and it was
- * within the step at a - 1, so the crossing is found by bisection. */
+ * within the step at a - 1, so the crossing is found by a search: galloping from a (a fast filter
+ * attack crosses at the very next sample, a slow decay hundreds later), then bisection. */
 static uint32_t first_cross(const sc_voice_t *v, const sc_prep_t *p, const int32_t *e1, int32_t key,
                             uint32_t a, uint32_t b)
 {
-    if (a >= b || !cutoff_moved(v, cutoff_note(v, p, e1[b - 1], 0, 0, key))) return b;
-    uint32_t lo = a, hi = b - 1;
-    while (lo < hi) {
+    if (a >= b) return b;
+    uint32_t lo = a, hi = a, step = 1;          /* not moved before lo; hi: the probe */
+    while (!cutoff_moved(v, cutoff_note(v, p, e1[hi], 0, 0, key))) {
+        if (hi == b - 1) return b;
+        lo = hi + 1;
+        hi = b - 1 - hi > step ? hi + step : b - 1;
+        step *= 2;
+    }
+    while (lo < hi) {                           /* moved at hi, not before lo */
         uint32_t mid = (lo + hi) / 2;
         if (cutoff_moved(v, cutoff_note(v, p, e1[mid], 0, 0, key))) hi = mid;
         else lo = mid + 1;
@@ -958,77 +965,85 @@ static void osc_run(sc_osc_t *o, int wave, const osc_io_t *io, uint32_t n)
         }
 }
 
-/* mix, filter and gain over [a, b), in passes over S_mix: one loop doing all of it held more
- * values than pi32v2 has registers (15 spills a sample); each pass here fits */
+/* mix, filter and gain over the block, in passes over S_mix: one loop doing all of it held more
+ * values than pi32v2 has registers (15 spills a sample); each pass here fits. Only the filter
+ * passes go by coefficient segment (sc_voice_render's seg_at / seg_c): a fast filter envelope
+ * makes a segment of nearly every sample, so a segment costs no more than loading its three
+ * coefficients. */
 typedef struct { int32_t m1, m2, mn, at, k; int ring; } mix_t;
 static int32_t S_mix[256];
 
-static void svf_pass(sc_svf_t *f, const int32_t *c, int32_t *x, int out_bp, uint32_t a, uint32_t b)
+static void svf_pass(sc_svf_t *f, const uint32_t *at, const int32_t (*c)[3], uint32_t nseg, int32_t *x, int out_bp)
 {
-    const int32_t a1 = c[0], a2 = c[1], a3 = c[2];
     int32_t ic1 = f->ic1, ic2 = f->ic2;
-    for (uint32_t i = a; i < b; i++) {
-        int32_t v3 = x[i] - ic2;
-        int32_t v1 = (int32_t)(((int64_t)a1 * ic1 + (int64_t)a2 * v3) >> 30);
-        int32_t v2 = ic2 + (int32_t)(((int64_t)a2 * ic1 + (int64_t)a3 * v3) >> 30);
-        ic1 = 2 * v1 - ic1;
-        ic2 = 2 * v2 - ic2;
-        x[i] = out_bp ? v1 : v2;
+    for (uint32_t g = 0; g < nseg; g++) {
+        const int32_t a1 = c[g][0], a2 = c[g][1], a3 = c[g][2];
+        for (uint32_t i = at[g], e = at[g + 1]; i < e; i++) {
+            int32_t v3 = x[i] - ic2;
+            int32_t v1 = (int32_t)(((int64_t)a1 * ic1 + (int64_t)a2 * v3) >> 30);
+            int32_t v2 = ic2 + (int32_t)(((int64_t)a2 * ic1 + (int64_t)a3 * v3) >> 30);
+            ic1 = 2 * v1 - ic1;
+            ic2 = 2 * v2 - ic2;
+            x[i] = out_bp ? v1 : v2;
+        }
     }
     f->ic1 = ic1;
     f->ic2 = ic2;
 }
 
-static void mix_run(sc_voice_t *v, int mode, const mix_t *m, const int32_t *c, int32_t *out, uint32_t a, uint32_t b)
+static void mix_run(sc_voice_t *v, int mode, const mix_t *m, const uint32_t *at, const int32_t (*c)[3], uint32_t nseg,
+                    int32_t *out, uint32_t n)
 {
-    const int32_t m1 = m->m1, m2 = m->m2, mn = m->mn, at = m->at;
+    const int32_t m1 = m->m1, m2 = m->m2, mn = m->mn, att = m->at;
     int32_t *x = S_mix;
     if (mn)                                     /* the noise joins the same sum before its shift */
-        for (uint32_t i = a; i < b; i++) {
+        for (uint32_t i = 0; i < n; i++) {
             int64_t acc = (int64_t)S_s1[i] * m1 + (int64_t)(m->ring ? sc_mul(S_s1[i], S_s2[i], 20) : S_s2[i]) * m2
                         + (int64_t)S_nz[i] * mn;
-            x[i] = (int32_t)(acc >> 16);
+            x[i] = sc_mul((int32_t)(acc >> 16), att, 16);
         }
     else if (m->ring)
-        for (uint32_t i = a; i < b; i++)
-            x[i] = (int32_t)(((int64_t)S_s1[i] * m1 + (int64_t)sc_mul(S_s1[i], S_s2[i], 20) * m2) >> 16);
+        for (uint32_t i = 0; i < n; i++)
+            x[i] = sc_mul((int32_t)(((int64_t)S_s1[i] * m1 + (int64_t)sc_mul(S_s1[i], S_s2[i], 20) * m2) >> 16), att, 16);
     else
-        for (uint32_t i = a; i < b; i++)
-            x[i] = (int32_t)(((int64_t)S_s1[i] * m1 + (int64_t)S_s2[i] * m2) >> 16);
-    for (uint32_t i = a; i < b; i++) x[i] = sc_mul(x[i], at, 16);
+        for (uint32_t i = 0; i < n; i++)
+            x[i] = sc_mul((int32_t)(((int64_t)S_s1[i] * m1 + (int64_t)S_s2[i] * m2) >> 16), att, 16);
 
     switch (mode) {
     case SC_FLT_LP24:
-        svf_pass(&v->f1, c, x, 0, a, b);
-        svf_pass(&v->f2, c, x, 0, a, b);
+        svf_pass(&v->f1, at, c, nseg, x, 0);
+        svf_pass(&v->f2, at, c, nseg, x, 0);
         break;
     case SC_FLT_LP12:
-        svf_pass(&v->f1, c, x, 0, a, b);
+        svf_pass(&v->f1, at, c, nseg, x, 0);
         break;
     case SC_FLT_HP12: {                         /* hp = in - k bp - lp: needs the input and both outputs */
-        const int32_t a1 = c[0], a2 = c[1], a3 = c[2], k = m->k;
+        const int32_t k = m->k;
         int32_t ic1 = v->f1.ic1, ic2 = v->f1.ic2;
-        for (uint32_t i = a; i < b; i++) {
-            int32_t in = x[i], v3 = in - ic2;
-            int32_t v1 = (int32_t)(((int64_t)a1 * ic1 + (int64_t)a2 * v3) >> 30);
-            int32_t v2 = ic2 + (int32_t)(((int64_t)a2 * ic1 + (int64_t)a3 * v3) >> 30);
-            ic1 = 2 * v1 - ic1;
-            ic2 = 2 * v2 - ic2;
-            x[i] = in - sc_mul(k, v1, 28) - v2;
+        for (uint32_t g = 0; g < nseg; g++) {
+            const int32_t a1 = c[g][0], a2 = c[g][1], a3 = c[g][2];
+            for (uint32_t i = at[g], e = at[g + 1]; i < e; i++) {
+                int32_t in = x[i], v3 = in - ic2;
+                int32_t v1 = (int32_t)(((int64_t)a1 * ic1 + (int64_t)a2 * v3) >> 30);
+                int32_t v2 = ic2 + (int32_t)(((int64_t)a2 * ic1 + (int64_t)a3 * v3) >> 30);
+                ic1 = 2 * v1 - ic1;
+                ic2 = 2 * v2 - ic2;
+                x[i] = in - sc_mul(k, v1, 28) - v2;
+            }
         }
         v->f1.ic1 = ic1;
         v->f1.ic2 = ic2;
         break;
     }
     case SC_FLT_BP12:
-        svf_pass(&v->f1, c, x, 1, a, b);
-        for (uint32_t i = a; i < b; i++) x[i] *= 2;
+        svf_pass(&v->f1, at, c, nseg, x, 1);
+        for (uint32_t i = 0; i < n; i++) x[i] *= 2;
         break;
     default:
-        svf_pass(&v->f1, c, x, 1, a, b);
+        svf_pass(&v->f1, at, c, nseg, x, 1);
         break;
     }
-    for (uint32_t i = a; i < b; i++) out[i] += sc_mul(x[i], S_amp[i], 16);
+    for (uint32_t i = 0; i < n; i++) out[i] += sc_mul(x[i], S_amp[i], 16);
 }
 
 void sc_voice_render(sc_voice_t *v, const sc_prep_t *p, int32_t *out, uint32_t n)
@@ -1222,6 +1237,6 @@ void sc_voice_render(sc_voice_t *v, const sc_prep_t *p, int32_t *out, uint32_t n
     /* 4. mix, filter, gain, per coefficient segment */
     mix_t m = { p->mix1, p->mix2, (use & SC_USE_NOISE) ? p->mixn : 0, p->atten, p->k_q28, L->ring };
     seg_at[nseg] = n;
-    for (uint32_t g = 0; g < nseg; g++) mix_run(v, mode, &m, seg_c[g], out, seg_at[g], seg_at[g + 1]);
+    mix_run(v, mode, &m, seg_at, (const int32_t (*)[3])seg_c, nseg, out, n);
 #undef NEW_SEG
 }
