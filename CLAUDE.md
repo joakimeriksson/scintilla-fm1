@@ -15,6 +15,15 @@ the host build's. A mismatch is a bug (in the engine, the compiler or the emulat
 
 ## Verified
 
+- 2026-11-01, the CPU work for fm1-dock (the two-word division, the galloping cutoff search, the mix once a
+  block, the envelope-only cutoff, the per-sample cutoff's skip, the lanes and the split render): every change the
+  same samples. `tests/run.sh` 320 pairs inside the limits with the scores unchanged; staged = per-sample on every
+  preset and on `tests/lfo_cut.c`; `tests/udiv.c` (20 M divisions = the bit loop); `tests/split.c` (16000 blocks on
+  two threads = `sc_render`); FM-1 = host on all eleven bench configs. The steady bench barely moves (Ring mod.
+  51.8 -> 50.9 %); attacks do: 8-note chords struck again and again on the ROM bank's 5 ms filter attacks (a
+  bench of fm1-dock's sweep, -Os -DSC_SMALL_OSC), Bass Drum - tom-toms' worst block 124.6 -> 62 % of a core, High
+  Portamento 131 -> 70 %, Normal Clavinet 120 -> 57 %, Filtered strings 72 -> 64 %. fm1-dock's module renders
+  half the voices on the second core: its worst factory patch ~38 % of core 0 in fm1-emu (it was 126 %).
 - 2026-10-31, after the oscillators' band-limited sync and the phase-derived triangle (Metallic): level within
   0.04 dB, spectrum median 0.02 dB, 320 pairs inside the limits; staged = per-sample on every preset and on
   `tests/lfo_cut.c`; FM-1 = host on all eleven bench configs. Cost: Chunky x8 19.6 -> 19.3 %, Ring mod. 49.2 ->
@@ -46,9 +55,10 @@ the host build's. A mismatch is a bug (in the engine, the compiler or the emulat
 - Since 2026-10-30 (the Take-off click) VoiceCore also recomputes the coefficients mid-block as soon as the cutoff
   has moved half a semitone (`CUTOFF_STEP`), and resets the oscillator phases only when the voice starts from
   silence; since 2026-10-31 it also starts the amp envelope 1.5 ms after the filter envelope (`AMP_ONSET_DELAY`:
-  the `amp_gate` countdown here, and `sc_voice_idle` is false while it runs). The C evaluates the cutoff only on the samples where it can have moved that far: the staged render per
-  sample while an LFO or the portamento drives it, and by bisection over the block's envelope values while only
-  the filter envelope does (the cutoff is monotone between the attack's peak and the next stage; `first_cross`);
+  the `amp_gate` countdown here, and `sc_voice_idle` is false while it runs). The C evaluates the cutoff only on the samples where it can have moved that far: the staged render,
+  while an LFO or the portamento drives it, on the samples the block's largest steps of its drivers leave room for
+  (`max_step`), and by a galloping search over the block's envelope values while only the filter envelope does (the
+  cutoff is monotone between the attack's peak and the next stage; `first_cross`);
   the per-sample path skips ahead by the largest step the envelope and the LFOs can take (`cut_eval`,
   `lfo_cut_dmax`: a 0.17 Hz LFO is looked at every ~1000 samples, not every one). Both update on the same
   samples, which keeps them bit-equal; `tests/lfo_cut.c` checks the LFO bound on every shape, and fails when it
@@ -97,6 +107,17 @@ the host build's. A mismatch is a bug (in the engine, the compiler or the emulat
 
 ## Gotchas that cost time
 
+- **A fast filter envelope makes a coefficient segment of nearly every sample.** The ROM bank's 5 ms attacks sweep
+  100+ semitones: past half a semitone a sample, so the staged render recomputes the coefficients (a 64 / 32
+  division) and starts a segment at each sample of the attack. Whatever costs per segment or per update is paid
+  ~1500 times in such a block (8 voices): the bit-loop division was a third of it, a bisection per crossing and a
+  mix pass per segment another third. Keep per-segment work at loading the coefficients (`svf_pass`), and measure
+  attacks, not held notes: `fm1/run.py`'s configs are steady and do not see it.
+- **No statics in the voice render.** fm1-dock's module renders voices on both cores at once: the render's buffers
+  are a lane (`sc_lane_t`), one per core (`SC_LANES`). A new per-render buffer goes into the lane, never into a
+  `static`; `tests/split.c` (two threads, one lane each) catches one that is shared. The lanes cost one core
+  ~1-2 % of itself with `SC_LANES=2` (an array's address is the lane's plus an offset, one more instruction
+  where the loops are short of registers; local pointers to the arrays did not help: clang folds them back).
 - **A 0.055 % constant is a bug when a parameter can be 1200.** Cents -> semitones used 655/65536 for 0.01;
   the ROM presets fold OSC2's 12-semitone transpose into its detune as 1200 cents, so OSC2 played 0.66 cents
   flat and every 1' / 2' preset beat against the reference (24 pairs failed, snr -3 dB). Now 0.01 in Q32.
@@ -146,7 +167,7 @@ engine/       the synth (no float, no 64-bit division, no libc): sc_patch.h sc_f
 host/         sc_render.c: scenarios on this computer
 tools/        gen_tables.py gen_presets.mjs ref_render.mjs scenario.mjs compare.py score_all.py profile.py
               reverb_ir.mjs reverb_check.py (the reverb against the app's impulses)
-tests/        run.sh, scenarios/*.txt
+tests/        run.sh, scenarios/*.txt; udiv.c (sc_udiv64), lfo_cut.c (the cutoff skip), split.c (two lanes)
 fm1/          the bench for fm1-emu: bench.c workload.h host_bench.c build.sh run.py, prim.h, trace.c;
               listen.py plays song.h (play.c / host_play.c, events from tools/song_h.py) into a WAV
 firmware/     the firmware: Dinghy 0.3 (exported from upstream, GPL) + firmware/src/scintilla.c; ./build.sh,

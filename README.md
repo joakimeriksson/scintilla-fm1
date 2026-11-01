@@ -7,20 +7,20 @@ as an engine for the **M-VAVE FM-1** pocket synth: fixed-point C for its JieLi A
 240 MHz cores), checked sample by sample against the browser original and measured on the emulated FM-1
 ([fm1-emu](https://github.com/joakimeriksson/fm1-emu)).
 
-**Status: 0.1.1, runs on the FM-1.** The engine plays all 80 factory patches (the 40 PRESETS and 40 MEMORIES,
+**Status: 0.2.0, runs on the FM-1.** ([What changed](CHANGELOG.md).) The engine plays all 80 factory patches (the 40 PRESETS and 40 MEMORIES,
 Paul Wiffen's Laser Harp "Ring mod." among them; the PRESETS with the values synthex-web decoded from the
 Synthex's own EPROMs) on this computer and on the emulated FM-1, with the same bits on
 both. [`firmware/`](firmware) makes it a firmware of its own on Dinghy: the keys, the knobs and pages, the screen,
-USB and DIN MIDI, USB audio, velocity and aftertouch from the FM-1's own keys (on its SETTINGS page), installable as `scintilla.fwsc`. Installed and played on a real FM-1 (2026-10-23); every check in the tests runs in
+USB and DIN MIDI, USB audio, velocity and aftertouch from the FM-1's own keys (on its SETTINGS page), installable as `scintilla.fwsc`. Installed and played on a real FM-1 (2026-11-01); every check in the tests runs in
 fm1-emu.
 The delay is not there yet (see [PLAN.md](PLAN.md)); the reverb is an algorithmic one measured against the app's.
 
 **Get it:** [Install on my FM-1](https://joakimeriksson.github.io/scintilla-fm1/) on its page (over USB, in Chrome or
 Edge), or the `.fwsc` from the [latest release](https://github.com/joakimeriksson/scintilla-fm1/releases/latest), installed with the
-[FM-1 Firmware Hub](https://thefirmwarehub.com) or `firmware/tools/fm1_install.py scintilla-0.1.1.fwsc` (USB-MIDI).
-Hold **OCT-** while switching on for the USB rescue; the hub takes it back to the official firmware. The release
-also has a short video of it playing. Scintilla does not read other firmwares' projects or samples: its own 80
-sounds are built in, and it keeps only its settings. It reports the identity `FM-1_963XYYZZ` (0.1.1: `FM-1_96300101`).
+[FM-1 Firmware Hub](https://thefirmwarehub.com) or `firmware/tools/fm1_install.py scintilla-0.2.0.fwsc` (USB-MIDI).
+Hold **OCT-** while switching on for the USB rescue; the hub takes it back to the official firmware. [The 0.1.1 release](https://github.com/joakimeriksson/scintilla-fm1/releases/tag/v0.1.1)
+has a short video of it playing. Scintilla does not read other firmwares' projects or samples: its own 80
+sounds are built in, and it keeps only its settings. It reports the identity `FM-1_963XYYZZ` (0.2.0: `FM-1_96300200`).
 
 ## What is in it
 
@@ -51,18 +51,25 @@ FM-1's output bit-identical to the host's:
 | patch | voices | % of a core |
 | --- | ---: | ---: |
 | Chunky Synth (2 saws, 24 dB) | 8 | 20 % |
-| Chunky Synth, both layers | 16 | 38 % |
-| Brushed Cymbals (noise) | 8 | 25 % |
+| Chunky Synth, both layers | 16 | 37 % |
+| Brushed Cymbals (noise) | 8 | 27 % |
 | Sync. Harmonic Sweep | 8 | 37 % |
-| Ring mod. (the Laser Harp: sync, ring, cross mod, PWM, glide) | 8 | 52 % |
-| Fat Sound (OSC2 -> OSC1 PWM: the per-sample path) | 8 | 54 % |
-| Metallic (the same, with sync and glide) | 8 | 58 % |
-| Landing (the per-sample path, an LFO on the cutoff) | 8 | 57 % |
-| Take-off (HP12, its filter envelope sweeping) | 8 | 35 % |
+| Ring mod. (the Laser Harp: sync, ring, cross mod, PWM, glide) | 8 | 51 % |
+| Fat Sound (OSC2 -> OSC1 PWM: the per-sample path) | 8 | 53 % |
+| Metallic (the same, with sync and glide) | 8 | 57 % |
+| Landing (the per-sample path, an LFO on the cutoff) | 8 | 56 % |
+| Take-off (HP12, its filter envelope sweeping) | 8 | 36 % |
 
 Instructions are a lower bound on cycles (flash loads and divides take longer). FM-1 firmwares aim to stay under half
 of a core; Ring mod.'s, Fat Sound's, Metallic's and Landing's eight voices go over it (the band-limited sync and
 the per-sample path's cross-mod).
+
+The table is of chords held after their attacks. An attack costs more where the filter envelope sweeps faster than
+half a semitone a sample (the ROM bank's 5 ms attacks of 100+ semitones): the filter's coefficients are recomputed
+at nearly every sample of it. Eight voices struck again and again, the heaviest such patches (High Portamento, Bass
+Drum - tom-toms) take ~70 % of a core in their attack's block (-Os, as fm1-dock builds it). fm1-dock's module
+renders half of the voices on the FM-1's second core (`sc_render_split` / `sc_render_voices` on two lanes,
+`SC_LANES=2`; the same samples): its worst factory patch takes ~38 % of core 0 in fm1-emu.
 
 ## Running it
 

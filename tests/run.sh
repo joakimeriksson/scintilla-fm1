@@ -11,6 +11,12 @@ mkdir -p build
 python3 tests/presets_test.py
 cc -O2 -Wall -Wextra -Wno-unused-function -o build/sc_render host/sc_render.c engine/sc_voice.c engine/sc_synth.c -lm
 cc -O2 -Wno-unused-function -DSC_TEST_GENERAL -o build/sc_render_general host/sc_render.c engine/sc_voice.c engine/sc_synth.c -lm
+# the 64 / 32 division with two hardware divides, bit for bit the bit loop's (sc_fixed.h)
+cc -O2 -Wall -Wextra -o build/udiv tests/udiv.c
+./build/udiv
+# the voices split between two threads on two lanes (fm1-dock's two cores), against sc_render
+cc -O2 -Wall -Wextra -Wno-unused-function -DSC_LANES=2 -pthread -o build/split tests/split.c engine/sc_voice.c engine/sc_synth.c
+./build/split
 # the per-sample path's skipped samples (cut_eval) against the staged render, over every LFO shape on the cutoff
 cc -O2 -Wall -Wextra -Wno-unused-function -o build/lfo_cut tests/lfo_cut.c engine/sc_voice.c engine/sc_synth.c -lm
 cc -O2 -Wno-unused-function -DSC_TEST_GENERAL -o build/lfo_cut_general tests/lfo_cut.c engine/sc_voice.c engine/sc_synth.c -lm

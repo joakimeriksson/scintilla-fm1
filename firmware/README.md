@@ -6,7 +6,8 @@ there, as a firmware of its own on [Dinghy](https://github.com/zvenson/dinghy) 0
 
 <p align="center"><img src="docs/screen.png" width="240" alt="The screen: the preset, the CPU load, a page of four parameters, the joystick, the keys that sound"></p>
 
-> **Status: 0.1, runs on the FM-1.** Installed and played on a real FM-1 (2026-10-23). Every check below is in
+> **Status: 0.2.0, runs on the FM-1.** Installed and played on a real FM-1 (2026-11-01). Every
+> check below is in
 > [fm1-emu](https://github.com/joakimeriksson/fm1-emu) (`tests/emu_test.py`).
 
 ## Playing it
@@ -88,8 +89,8 @@ as fm1-harbor does) and reads the MASTER pot from the key scan while it senses t
 is Velo's key sensing (Charles Vestal's fm1-velocity, as CS-1 and fm1-harbor carry it); `gfx.c` and `tests/host.c`
 build host mode on macOS; `tools/build.py` copies and compiles the engine and names the package.
 
-**Package identity `FM-1_963XYYZZ`**, the version in the last five digits (`FM-1_96300101` is 0.1.1;
-`./build.sh --release 0.1.1`). No other firmware in the [FM-1 Firmware Hub](https://thefirmwarehub.com)'s list
+**Package identity `FM-1_963XYYZZ`**, the version in the last five digits (`FM-1_96300200` is 0.2.0;
+`./build.sh --release 0.2.0`). No other firmware in the [FM-1 Firmware Hub](https://thefirmwarehub.com)'s list
 reports a number starting with 963 (2026-10-23); 0.1 was `FM-1_960`, which SID-1 also uses.
 
 ## License
