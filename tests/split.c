@@ -35,7 +35,8 @@ int main(void)
     pthread_create(&t, 0, core1, 0);
     long bad = 0, blocks = 0;
     for (int c = 0; c < SC_N_PRESETS + SC_N_PRESETS / 4; c++) {
-        sc_patch_t P = SC_PRESETS[c < SC_N_PRESETS ? c : 4 * (c - SC_N_PRESETS)];
+        sc_patch_t P;
+        sc_preset_load((unsigned)(c < SC_N_PRESETS ? c : 4 * (c - SC_N_PRESETS)), &P);
         if (c >= SC_N_PRESETS) { P.voice_mode = SC_VM_DOUBLE; P.layer[1] = P.layer[0]; P.layer[1].o2_detune += 7; }
         sc_init(&A, &P);
         sc_init(&B, &P);
