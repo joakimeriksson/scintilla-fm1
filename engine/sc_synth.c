@@ -29,8 +29,8 @@ void sc_reprep(sc_synth_t *s)
 
 void sc_init(sc_synth_t *s, const sc_patch_t *patch)
 {
-    uint8_t *b = (uint8_t *)s;
-    for (uint32_t i = 0; i < sizeof *s; i++) b[i] = 0;
+    uint32_t *w = (uint32_t *)s;                /* (by words: a patch load runs this in the audio interrupt, ~150 KB) */
+    for (uint32_t i = 0; i < sizeof *s / 4; i++) w[i] = 0;
     s->patch = *patch;
     sc_perf_default(&s->perf);
     for (int k = 0; k < 2; k++) {

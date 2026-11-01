@@ -550,8 +550,8 @@ static inline void svf_step(sc_svf_t *f, int32_t in, int32_t a1, int32_t a2, int
 
 void sc_voice_init(sc_voice_t *v, uint32_t seed)
 {
-    uint8_t *b = (uint8_t *)v;
-    for (uint32_t i = 0; i < sizeof *v; i++) b[i] = 0;
+    uint32_t *w = (uint32_t *)v;
+    for (uint32_t i = 0; i < sizeof *v / 4; i++) w[i] = 0;
     v->noise1 = seed ? seed : 1u;
     v->noise2 = 0xdeadbeefu;                    /* VoiceCore's noiseW2 and PinkNoise seeds */
     pink_init(&v->pink, 0xfeedfaceu);
@@ -664,6 +664,18 @@ static inline uint32_t first_cross(const sc_voice_t *v, const env_cut_t *c, cons
 }
 
 static void update_coeffs(sc_voice_t *v, const sc_prep_t *p, int32_t cn);
+
+/* the largest |x[i + 1] - x[i]| over [a, b) */
+static uint32_t max_step(const int32_t *x, uint32_t a, uint32_t b)
+{
+    uint32_t m = 0;
+    for (uint32_t i = a + 1; i < b; i++) {
+        int32_t d = x[i] - x[i - 1];
+        uint32_t u = (uint32_t)(d < 0 ? -d : d);
+        if (u > m) m = u;
+    }
+    return m;
+}
 
 /* LFO k's largest move of the cutoff a sample (Q16 semitones) over the samples after this one, and
  * in *lim no more of them than it keeps to that: a square's edge, a ramp's wrap and a new random
@@ -1198,13 +1210,32 @@ void sc_voice_render_lane(sc_voice_t *v, const sc_prep_t *p, int32_t *out, uint3
         const int lfo_tracks = ((use & SC_USE_L1) && p->kc[0]) || ((use & SC_USE_L2) && p->kc[1]);
         const int opposite = (p->kc_env > 0) != (p->kc_env1 > 0) && p->kc_env && p->kc_env1;
         if (lfo_tracks || key_per_sample || (track_env && opposite)) {
-            for (uint32_t i = i0; i < i1; i++) {
+            /* the cutoff's largest move a sample over this block, from the largest moves of what
+             * drives it (each shifted term moves by at most its input's move scaled, and one); after
+             * a look at sample i, the next room / dmax samples cannot cross the step (as cut_eval) */
+            uint32_t dmax = 0;
+            if (lfo_tracks) {
+                uint32_t d1 = lfo_tracks && p->kc[0] ? max_step(l1, i0, i1) : 0;
+                uint32_t d2 = lfo_tracks && p->kc[1] ? max_step(l2, i0, i1) : 0;
+                dmax += (uint32_t)(((uint64_t)d1 * (uint32_t)(p->kc[0] < 0 ? -p->kc[0] : p->kc[0])
+                                  + (uint64_t)d2 * (uint32_t)(p->kc[1] < 0 ? -p->kc[1] : p->kc[1])) >> 20) + 1;
+            }
+            if (track_env) {
+                uint32_t de = max_step(w->e1, i0, i1);
+                dmax += (uint32_t)(((uint64_t)de * (uint32_t)(p->kc_env < 0 ? -p->kc_env : p->kc_env)) >> 30) + 1
+                      + (uint32_t)(((uint64_t)de * (uint32_t)(p->kc_env1 < 0 ? -p->kc_env1 : p->kc_env1)) >> 30) + 1;
+            }
+            if (key_per_sample)
+                dmax += (uint32_t)(((uint64_t)max_step(w->key, i0, i1) * (uint32_t)(p->kc_key < 0 ? -p->kc_key : p->kc_key)) >> 16) + 1;
+            for (uint32_t i = i0; i < i1; ) {
                 int32_t cn = cutoff_note(v, p, track_env ? w->e1[i] : e1_const, l1[i], l2[i],
                                          key_per_sample ? w->key[i] : key_c);
                 if ((block_start && i == i0) || cutoff_moved(v, cn)) {
                     update_coeffs(v, p, cn);
                     NEW_SEG(i);
                 }
+                const int32_t d = cn - v->cn;
+                i += (uint32_t)(SC_CUTOFF_STEP - (d < 0 ? -d : d)) / dmax + 1;
             }
         } else if (track_env) {
             const env_cut_t ec = env_cut(v, p, key_c);
