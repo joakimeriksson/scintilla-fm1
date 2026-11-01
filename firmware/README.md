@@ -93,6 +93,14 @@ build host mode on macOS; `tools/build.py` copies and compiles the engine and na
 `./build.sh --release 0.2.0`). No other firmware in the [FM-1 Firmware Hub](https://thefirmwarehub.com)'s list
 reports a number starting with 963 (2026-10-23); 0.1 was `FM-1_960`, which SID-1 also uses.
 
+## Releasing
+
+`tools/release.py`, from a clean `main` whose `CHANGELOG.md` and READMEs already say the version: `check X.Y.Z` (every
+test, the package), `install X.Y.Z` (on the connected FM-1, then `tools/fm1_listen.py`: presets played into it over
+MIDI, its USB audio recorded and held against the host build), then play it yourself and leave it and come back, then
+`publish X.Y.Z` (the tag: GitHub builds and signs the release, the notes come from the changelog, the hub lists it
+within three hours). It asks before it installs and before it tags; going back to V15 stays by hand, on the hub's page.
+
 ## License
 
 GPL-3.0-only, as Dinghy, Felucca and SLOOP. Details, credits and third-party parts in [LICENSING.md](LICENSING.md).
