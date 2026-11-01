@@ -13,6 +13,9 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / 'tools'))
+from host_cc import host_cc
+
 # Captured from the pre-compression bank; includes every field and padding byte.
 # Update only for intentional sound/name changes, after the reference check.
 PATCH_SHA256 = 'a70ad50882259e08b2120eab52cd352771604a92f9bdd39559c533f38c530401'
@@ -56,9 +59,10 @@ int main(int argc, char **argv) {
 '''
     source += '  fwrite(&p, sizeof p, 1, stdout);\n }\n return 0;\n}\n'
     (out / 'test.c').write_text(source)
-    cc = ['arch', '-arm64', 'cc'] if sys.platform == 'darwin' else ['cc']
+    cc = host_cc()
     subprocess.run(cc + ['-O2', '-Wall', '-Wextra', '-Wno-unused-function',
-                        '-fsanitize=undefined,address', '-I', str(ROOT / 'engine'),
+                        '-fsanitize=undefined,address', '-fno-sanitize-recover=undefined',
+                        '-I', str(ROOT / 'engine'),
                         str(out / 'test.c'), '-o', str(out / 'test')], check=True)
     decoded = subprocess.check_output([str(out / 'test')])
     if not args.reference:

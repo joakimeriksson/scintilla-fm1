@@ -16,6 +16,7 @@ import struct
 import subprocess
 import sys
 import zlib
+from host_cc import host_cc
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'firmware/tools'))
@@ -52,9 +53,7 @@ int main(void) {
 #endif
 }
 ''')
-    cc = ['cc']
-    if sys.platform == 'darwin':
-        cc = ['arch', '-arm64', 'cc']
+    cc = host_cc()
     subprocess.run(cc + ['-I', str(args.engine_dir.resolve()), str(source), '-o', str(out / 'export')], check=True)
     header, raw = subprocess.check_output([str(out / 'export')]).split(b'\n', 1)
     psize, lsize, loff, tailoff, fxsize, fxoff, count = map(int, header.split())

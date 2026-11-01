@@ -18,6 +18,7 @@ from pathlib import Path
 import struct
 import subprocess
 import sys
+from host_cc import host_cc
 
 ROOT = Path(__file__).resolve().parents[1]
 WIDTHS = [8] * 9 + [7] * 8 + [4] * 9 + [6] + [3] * 4 + [2] * 9
@@ -54,7 +55,7 @@ int main(void) {
  fwrite(SC_PRESETS, sizeof SC_PRESETS, 1, stdout);
 }
 ''')
-    cc = ['arch', '-arm64', 'cc'] if sys.platform == 'darwin' else ['cc']
+    cc = host_cc()
     subprocess.run(cc + ['-I', str(reference.parent), '-I', str(ROOT / 'engine'),
                         str(export), '-o', str(work / 'export')], check=True)
     header, raw = subprocess.check_output([str(work / 'export')]).split(b'\n', 1)
