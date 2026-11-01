@@ -2,15 +2,17 @@
 # SPDX-License-Identifier: GPL-3.0-only
 """One round of a release, from a clean main whose CHANGELOG.md and READMEs already say the version:
   tools/release.py check X.Y.Z     the identity free on the hub, every test, the release package
-  tools/release.py install X.Y.Z   that package onto the connected FM-1 (it asks first)
-      ... play it, leave it and come back (the hub's checklist): the hub's page takes it back to V15
+  tools/release.py install X.Y.Z   that package onto the connected FM-1 (it asks first), then listen
+  tools/release.py listen X.Y.Z    the FM-1 plays presets over MIDI, its USB audio held against the host build
+      ... play it yourself, leave it and come back (the hub's checklist): the hub's page takes it back to V15
   tools/release.py publish X.Y.Z   the tag (it asks first; a tag publishes to players), verify, the notes
   tools/release.py verify X.Y.Z    the release's package against the one played, and its signature; changes nothing
   tools/release.py hub X.Y.Z       what the hub lists
 check --quick leaves out tests/run.sh and fm1/run.py (a few minutes each). publish --dry-run prints what it would do.
 GitHub builds and signs the release (.github/workflows/release.yml), so a release's .fwsc is never replaced by hand:
 verify only compares it with the local build, which is bit for bit the same. V15 stays manual: fm1_install.py refuses
-its package. Needs a python with numpy and Pillow, gh signed in, uv for the install."""
+its package. publish wants a passed listen of this very package. Needs a python with numpy and Pillow, gh signed in,
+uv for the FM-1."""
 import argparse
 import hashlib
 import json
@@ -161,6 +163,21 @@ def install_tool(*args):
             "firmware/tools/fm1_install.py", *args]
 
 
+def stamp(v):
+    return ROOT / "firmware" / "build" / f"listened-{v}.txt"
+
+
+def listen(a):
+    """fm1_listen.py on the connected FM-1, which must be running this version"""
+    pkg = package(a.version)
+    if not pkg.exists():
+        die(f"no {pkg}: tools/release.py check {a.version}")
+    deps = ["--with", "sounddevice", "--with", "numpy", "--with", "mido", "--with", "python-rtmidi"]
+    run(["uv", "run", "-q", "--no-project"] + deps + ["python", "-I", "tools/fm1_listen.py"])
+    stamp(a.version).write_text(sha(pkg) + "\n")
+    print(f"ok   heard: the FM-1 plays what the host build plays\nnext: tools/release.py publish {a.version}")
+
+
 def install(a):
     pkg = package(a.version)
     if not pkg.exists():
@@ -168,10 +185,10 @@ def install(a):
     print(out(*install_tool("--info")).splitlines()[-1])
     ask(f"Install {pkg.name} ({sha(pkg)[:12]}) on this FM-1?", a.yes)
     run(install_tool(pkg, "--yes"))
-    print(f"""Installed. The hub's checklist, on the FM-1:
-  play it (what this release changed, and a chord struck again and again on a heavy patch);
-  leave it, and come back from V15 and from another firmware (the hub's page goes to V15).
-next: tools/release.py publish {a.version}""")
+    listen(a)
+    print("""The hub's checklist, still yours on the FM-1:
+  play it (what this release changed; fm1_listen.py cannot hear what is musically wrong);
+  leave it, and come back from V15 and from another firmware (the hub's page goes to V15).""")
 
 
 def notes(v):
@@ -202,6 +219,8 @@ def publish(a):
     pkg = package(v)
     if not pkg.exists():
         die(f"no {pkg}: tools/release.py check {v}")
+    if not stamp(v).exists() or stamp(v).read_text().strip() != sha(pkg):
+        die(f"this package has not been heard on an FM-1: tools/release.py install {v}")
     head = out("git", "rev-parse", "--short", "HEAD")
     if a.dry_run:
         print(f"would tag {head} v{v}, push it, wait for the build, then verify\nthe notes:\n\n{notes(v)}")
@@ -245,7 +264,8 @@ def hub(a):
 def main():
     ap = argparse.ArgumentParser(description="One round of a release: see the top of this file")
     sub = ap.add_subparsers(dest="cmd", required=True)
-    for name, fn in (("check", check), ("install", install), ("publish", publish), ("verify", verify), ("hub", hub)):
+    for name, fn in (("check", check), ("install", install), ("listen", listen), ("publish", publish), ("verify", verify),
+                     ("hub", hub)):
         p = sub.add_parser(name)
         p.add_argument("version", metavar="X.Y.Z")
         p.set_defaults(fn=fn)
