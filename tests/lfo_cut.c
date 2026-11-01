@@ -17,11 +17,13 @@ int main(void)
     static const double rates[] = { 0.07, 1.3, 7.0, 27.7 };
     static const double depths[] = { 0.05, 0.5, 1.0 };
     static int32_t buf[128];
+    sc_patch_t patch;
+    sc_preset_load(0, &patch);
     for (int shape = 0; shape <= SC_LFO_SQRU; shape++)
         for (int r = 0; r < 4; r++)
             for (int d = 0; d < 3; d++)
                 for (int var = 0; var < 4; var++) {
-                    sc_layer_t L = SC_PRESETS[0].layer[0];          /* Chunky Synth: 2 saws, lp24 */
+                    sc_layer_t L = patch.layer[0];          /* Chunky Synth: 2 saws, lp24 */
                     L.lfo[0] = (sc_lfo_p_t){ .shape = (int8_t)shape, .sync = 1, .rate = Q16(rates[r]),
                                              .delay = var & 1 ? Q16(0.4) : 0, .depth_a = Q16(1), .depth_b = Q16(depths[d]) };
                     L.mm[SC_MM_L1_CUT] = Q16(1);

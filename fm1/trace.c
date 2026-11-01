@@ -13,7 +13,9 @@ static int32_t out[400];
 #include <stdio.h>
 int main(void)
 {
-    sc_prep(&prep, &SC_PRESETS[0].layer[0], &(sc_perf_t){ 0, 0, 19661, 19661, 32768, 32768 });
+    sc_patch_t patch;
+    sc_preset_load(0, &patch);
+    sc_prep(&prep, &patch.layer[0], &(sc_perf_t){ 0, 0, 19661, 19661, 32768, 32768 });
     sc_voice_init(&v, 1);
     sc_voice_note_on(&v, &prep, 48, 52000);
     sc_voice_render(&v, &prep, out, 400);
@@ -30,7 +32,9 @@ int main(void)
     uint32_t i;
     for (i = 0; &__data_start[i] < __data_end; i++) __data_start[i] = __data_load[i];
     for (i = 0; &__bss_start[i] < __bss_end; i++) __bss_start[i] = 0;
-    sc_prep(&prep, &SC_PRESETS[0].layer[0], &(sc_perf_t){ 0, 0, 19661, 19661, 32768, 32768 });
+    sc_patch_t patch;
+    sc_preset_load(0, &patch);
+    sc_prep(&prep, &patch.layer[0], &(sc_perf_t){ 0, 0, 19661, 19661, 32768, 32768 });
     sc_voice_init(&v, 1);
     sc_voice_note_on(&v, &prep, 48, 52000);
     sc_voice_render(&v, &prep, out, 400);

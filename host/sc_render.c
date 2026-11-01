@@ -138,7 +138,7 @@ int main(int argc, char **argv)
 {
     if (argc >= 2 && !strcmp(argv[1], "list")) {
         for (int i = 0; i < SC_N_PRESETS; i++)
-            printf("%2d  %s %2d  %s\n", i, SC_PRESET_ADDR[i] >= 100 ? "MEM" : "PRE", SC_PRESET_ADDR[i] % 100, SC_PRESETS[i].name);
+            printf("%2d  %s %2d  %s\n", i, SC_PRESET_ADDR[i] >= 100 ? "MEM" : "PRE", SC_PRESET_ADDR[i] % 100, sc_preset_name(i));
         return 0;
     }
     if (argc == 7 && !strcmp(argv[1], "reverb")) {
@@ -167,7 +167,9 @@ int main(int argc, char **argv)
     if (p < 0 || p >= SC_N_PRESETS) { fprintf(stderr, "no preset %d\n", p); return 2; }
     scen_t *sc = malloc(sizeof *sc);
     parse(argv[3], sc);
-    if (!strcmp(argv[1], "voice")) run_voice(&SC_PRESETS[p], sc, argv[4]);
-    else run_synth(&SC_PRESETS[p], sc, argv[4]);
+    sc_patch_t patch;
+    sc_preset_load((unsigned)p, &patch);
+    if (!strcmp(argv[1], "voice")) run_voice(&patch, sc, argv[4]);
+    else run_synth(&patch, sc, argv[4]);
     return 0;
 }

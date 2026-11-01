@@ -32,10 +32,22 @@ static const wl_config_t WL[] = {
 
 static sc_synth_t wl_synth;
 
+/* Exercise every decoder path on the target, independently of audio configs. */
+static uint32_t wl_preset_hash(unsigned index)
+{
+    sc_patch_t p;
+    sc_preset_load(index, &p);
+    const uint8_t *bytes = (const uint8_t *)&p;
+    uint32_t h = 2166136261u;
+    for (unsigned i = 0; i < sizeof p; i++) h = (h ^ bytes[i]) * 16777619u;
+    return h;
+}
+
 static void wl_start(const wl_config_t *c)
 {
     static const uint8_t chord[8] = { 48, 55, 60, 64, 67, 71, 74, 79 };
-    sc_patch_t p = SC_PRESETS[c->preset];
+    sc_patch_t p;
+    sc_preset_load((unsigned)c->preset, &p);
     if (c->double_layer) { p.voice_mode = SC_VM_DOUBLE; p.layer[1] = p.layer[0]; }
     sc_init(&wl_synth, &p);
     for (int i = 0; i < c->voices; i++) sc_post(&wl_synth, SC_EV_NOTE_ON, chord[i], 52000);

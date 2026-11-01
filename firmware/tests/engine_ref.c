@@ -13,7 +13,9 @@ int main(int argc, char **argv)
 {
     int K = atoi(argv[1]), N = atoi(argv[2]), note = argc > 3 ? atoi(argv[3]) : 60, preset = argc > 4 ? atoi(argv[4]) : 0;
     int32_t blk[512]; int16_t pcm[512];
-    sc_init(&s, &SC_PRESETS[preset]);
+    sc_patch_t patch;
+    sc_preset_load((unsigned)preset, &patch);
+    sc_init(&s, &patch);
     sc_perf_default(&s.perf);
     sc_reprep(&s);                               /* the firmware's SC_EV_PATCH after the load */
     for (int b = 0; b < K + N; b++) {
