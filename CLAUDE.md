@@ -166,6 +166,7 @@ engine/       the synth (no float, no 64-bit division, no libc): sc_patch.h sc_f
               sc_tables.h (generated) sc_presets.h (generated)
 host/         sc_render.c: scenarios on this computer
 tools/        gen_tables.py gen_presets.mjs ref_render.mjs scenario.mjs compare.py score_all.py profile.py
+              release.py (one round of a release: firmware/README.md)
               reverb_ir.mjs reverb_check.py (the reverb against the app's impulses)
 tests/        run.sh, scenarios/*.txt; udiv.c (sc_udiv64), lfo_cut.c (the cutoff skip), split.c (two lanes)
 fm1/          the bench for fm1-emu: bench.c workload.h host_bench.c build.sh run.py, prim.h, trace.c;
