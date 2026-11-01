@@ -7,20 +7,20 @@ as an engine for the **M-VAVE FM-1** pocket synth: fixed-point C for its JieLi A
 240 MHz cores), checked sample by sample against the browser original and measured on the emulated FM-1
 ([fm1-emu](https://github.com/joakimeriksson/fm1-emu)).
 
-**Status: 0.1.1, runs on the FM-1.** The engine plays all 80 factory patches (the 40 PRESETS and 40 MEMORIES,
+**Status: 0.2.0, runs on the FM-1.** ([What changed](CHANGELOG.md).) The engine plays all 80 factory patches (the 40 PRESETS and 40 MEMORIES,
 Paul Wiffen's Laser Harp "Ring mod." among them; the PRESETS with the values synthex-web decoded from the
 Synthex's own EPROMs) on this computer and on the emulated FM-1, with the same bits on
 both. [`firmware/`](firmware) makes it a firmware of its own on Dinghy: the keys, the knobs and pages, the screen,
-USB and DIN MIDI, USB audio, velocity and aftertouch from the FM-1's own keys (on its SETTINGS page), installable as `scintilla.fwsc`. Installed and played on a real FM-1 (2026-10-23); every check in the tests runs in
+USB and DIN MIDI, USB audio, velocity and aftertouch from the FM-1's own keys (on its SETTINGS page), installable as `scintilla.fwsc`. Installed and played on a real FM-1 (2026-11-01); every check in the tests runs in
 fm1-emu.
 The delay is not there yet (see [PLAN.md](PLAN.md)); the reverb is an algorithmic one measured against the app's.
 
 **Get it:** [Install on my FM-1](https://joakimeriksson.github.io/scintilla-fm1/) on its page (over USB, in Chrome or
 Edge), or the `.fwsc` from the [latest release](https://github.com/joakimeriksson/scintilla-fm1/releases/latest), installed with the
-[FM-1 Firmware Hub](https://thefirmwarehub.com) or `firmware/tools/fm1_install.py scintilla-0.1.1.fwsc` (USB-MIDI).
-Hold **OCT-** while switching on for the USB rescue; the hub takes it back to the official firmware. The release
-also has a short video of it playing. Scintilla does not read other firmwares' projects or samples: its own 80
-sounds are built in, and it keeps only its settings. It reports the identity `FM-1_963XYYZZ` (0.1.1: `FM-1_96300101`).
+[FM-1 Firmware Hub](https://thefirmwarehub.com) or `firmware/tools/fm1_install.py scintilla-0.2.0.fwsc` (USB-MIDI).
+Hold **OCT-** while switching on for the USB rescue; the hub takes it back to the official firmware. [The 0.1.1 release](https://github.com/joakimeriksson/scintilla-fm1/releases/tag/v0.1.1)
+has a short video of it playing. Scintilla does not read other firmwares' projects or samples: its own 80
+sounds are built in, and it keeps only its settings. It reports the identity `FM-1_963XYYZZ` (0.2.0: `FM-1_96300200`).
 
 ## What is in it
 
