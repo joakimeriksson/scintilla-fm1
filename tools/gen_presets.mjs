@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// Write engine/sc_presets.h from synthex-web's factory bank (packages/engine/src/presets/factory.ts),
+// Write engine/sc_presets_data.h from synthex-web's factory bank (packages/engine/src/presets/factory.ts),
 // read as it is: every continuous value becomes Q16, every enum its index (engine/sc_patch.h).
 //
 //   node --experimental-transform-types tools/gen_presets.mjs [SYNTHEX_WEB_DIR]
-import { writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
+import { execFileSync } from 'node:child_process'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -99,6 +100,19 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     all.map((p) => patchC(p.patch)).join(',\n'),
     '};', '', '#endif', '',
   ]
-  writeFileSync(join(here, '../engine/sc_presets.h'), h.join('\n'))
-  console.log(`engine/sc_presets.h: ${all.length} patches`)
+  const referenceDir = join(here, '../build/preset-reference')
+  mkdirSync(referenceDir, { recursive: true })
+  const reference = join(referenceDir, 'sc_presets.h')
+  writeFileSync(reference, h.join('\n'))
+  const data = join(here, '../engine/sc_presets_data.h')
+  const previous = existsSync(data) ? readFileSync(data) : null
+  try {
+    execFileSync(process.env.PYTHON ?? 'python3', [join(here, 'pack_presets.py'), reference], { stdio: 'inherit' })
+    execFileSync(process.env.PYTHON ?? 'python3', [join(here, '../tests/presets_test.py'), '--reference', reference], { stdio: 'inherit' })
+  } catch (error) {
+    if (previous) writeFileSync(data, previous)
+    else if (existsSync(data)) unlinkSync(data)
+    throw error
+  }
+  console.log(`engine/sc_presets_data.h: ${all.length} patches (reference in build/preset-reference)`)
 }

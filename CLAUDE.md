@@ -142,7 +142,7 @@ the host build's. A mismatch is a bug (in the engine, the compiler or the emulat
 
 ```
 engine/       the synth (no float, no 64-bit division, no libc): sc_patch.h sc_fixed.h sc_voice.* sc_synth.*
-              sc_tables.h (generated) sc_presets.h (generated)
+              sc_tables.h (generated), sc_presets.h (decoder), sc_presets_data.h (generated)
 host/         sc_render.c: scenarios on this computer
 tools/        gen_tables.py gen_presets.mjs ref_render.mjs scenario.mjs compare.py score_all.py profile.py
               reverb_ir.mjs reverb_check.py (the reverb against the app's impulses)
@@ -152,3 +152,11 @@ fm1/          the bench for fm1-emu: bench.c workload.h host_bench.c build.sh ru
 firmware/     the firmware: Dinghy 0.3 (exported from upstream, GPL) + firmware/src/scintilla.c; ./build.sh,
               tests/emu_test.py (fm1-live), tests/run_host.sh. Its README says what changed in Dinghy's files
 ```
+
+Factory storage: `sc_preset_load(index, &patch)` expands 25-byte records on recall;
+`sc_preset_name(index)` reads the shared name pool. PRESETS are the original 200-bit Synthex
+panel format; MEMORIES are exact software extension records with generated palettes.
+`tools/gen_presets.mjs` retains a full-size reference in `build/preset-reference/` and checks
+every decoded byte before accepting the generated data. `tests/presets_test.py` also has
+independent pre-compression bank and original-ROM checksums; change them only for intentional
+sound changes. `fm1/run.py` compares all 80 decoded patch hashes between target and host.

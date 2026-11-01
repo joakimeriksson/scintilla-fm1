@@ -1,11 +1,16 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
 /* fm1/bench.c's workload on this computer: the hashes the FM-1 must reproduce. */
 #include <stdio.h>
+#include <string.h>
 #include "workload.h"
 
 int main(int argc, char **argv)
 {
     static int32_t out[512];
+    if (argc > 1 && !strcmp(argv[1], "presets")) {
+        for (unsigned i = 0; i < SC_N_PRESETS; i++) printf("%08x\n", wl_preset_hash(i));
+        return 0;
+    }
     if (argc > 1) {                             /* "block": config 0's first block, as fm1/bench.c keeps it */
         wl_start(&WL[0]);
         wl_block(out);

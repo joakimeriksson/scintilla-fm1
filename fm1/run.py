@@ -52,7 +52,7 @@ def main():
     configs, blocks = workload()
     out = subprocess.run([str(EMU), "--bin", "build/fm1/bench.bin", "--entry", "0x02000120",
                           "--break-pc", hex(mark), "--steps", "2000000000", "--quiet",
-                          "--dump", hex(RES), str(2 + len(configs))],
+                          "--dump", hex(RES), str(1024 + 80)],
                          cwd=ROOT, capture_output=True, text=True,
                          env={**os.environ, "FM1_BREAK_MAX": str(2 * len(configs) + 1)})
     steps = [int(s) for s in re.findall(r"^break c0 pc=\S+ \[(\d+)\]", out.stdout, re.M)]
@@ -64,6 +64,10 @@ def main():
     if len(steps) < 2 * len(configs) or not mem or mem[0] != 0x42465853:  # (the bench halts itself)
         sys.exit(f"the bench did not finish:\n{out.stdout[-1500:]}\n{out.stderr[-1500:]}")
     want = host_hashes()
+    patch_hashes = [int(h, 16) for h in subprocess.check_output([str(ROOT / "build/host_bench"), "presets"], text=True).split()]
+    if mem[1024:1024 + 80] != patch_hashes:
+        sys.exit("decoded factory patches differ between FM-1 and host")
+    print("All 80 decoded factory patches: FM-1 = host, byte hashes equal.\n")
     print(f"Scintilla engine on the emulated FM-1 (pi32v2 {opt}), {FS} Hz, {MHZ} MHz, one core;")
     print(f"a block is {BLOCK} frames = {BUDGET:,.0f} instructions of budget (half of it is the safe line).\n")
     print(f" {'config':30} {'voices':>6} {'instr/block':>12} {'per voice-sample':>17} {'% of a core':>12}  = host")

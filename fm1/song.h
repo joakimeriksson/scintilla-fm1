@@ -29,7 +29,9 @@ static void song_play(int16_t *pcm)
     for (int p = 0; p < SONG_N; p++) {
         const song_part_t *P = &SONG[p];
         const int32_t *q = P->perf;
-        sc_init(&song_synth, &SC_PRESETS[P->preset]);
+        sc_patch_t patch;
+        sc_preset_load((unsigned)P->preset, &patch);
+        sc_init(&song_synth, &patch);
         song_synth.perf = (sc_perf_t){ q[0], q[1], q[2], q[3], q[4], q[5] };
         sc_reprep(&song_synth);
         uint32_t e = P->first, end = P->first + P->n;

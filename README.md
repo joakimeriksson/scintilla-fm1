@@ -27,7 +27,7 @@ sounds are built in, and it keeps only its settings. It reports the identity `FM
 | | |
 | --- | --- |
 | `engine/` | the synth, integer C with no dependencies: `sc_voice.c` (one voice: two PolyBLEP oscillators, noise, the zero-delay-feedback filter in five modes, two envelopes, two LFOs, glide, sync, ring and cross mod), `sc_synth.c` (two layers, poly / mono / unison, split / double, chorus, reverb, limiter) |
-| `engine/sc_presets.h` | the factory bank, generated from synthex-web's `factory.ts` by `tools/gen_presets.mjs` |
+| `engine/sc_presets.h`, `sc_presets_data.h` | factory decoder and generated bank: 25-byte records, expanded on recall |
 | `engine/sc_tables.h` | pitch, cutoff, sine, log2 / exp2 tables for 44.1 kHz (`tools/gen_tables.py`) |
 | `host/sc_render.c` | renders a scenario on this computer: one voice as float32, or the instrument as a WAV |
 | `tools/ref_render.mjs` | the same scenario through synthex-web's own `VoiceCore`: the reference |
@@ -68,7 +68,7 @@ the per-sample path's cross-mod).
 
 ```sh
 python3 tools/gen_tables.py                                       # engine/sc_tables.h
-node --experimental-transform-types tools/gen_presets.mjs         # engine/sc_presets.h (SYNTHEX_WEB=path to synthex-web)
+node --experimental-transform-types tools/gen_presets.mjs         # engine/sc_presets_data.h (SYNTHEX_WEB=path to synthex-web)
 tests/run.sh                                                      # the comparison with VoiceCore
 fm1/run.py                                                        # the cost on the emulated FM-1
 fm1/listen.py                                                     # a preset tour played by the emulated FM-1 -> build/listen/fm1-emu.wav
@@ -77,6 +77,21 @@ cc -O2 -o build/sc_render host/sc_render.c engine/sc_voice.c engine/sc_synth.c -
 build/sc_render list                                              # the presets
 build/sc_render synth 36 tests/scenarios/chords.txt laser.wav     # listen
 ```
+
+The factory bank stores 80 records of 25 bytes each. PRESETS use the original Synthex ROM
+bit layout; MEMORIES use a software extension with shared exact-value palettes for LFO2,
+LP12 and effects. Names and calibrated conversion tables are shared separately. Recall expands
+one record into the existing staging patch; rendering still uses the full Q16 patch and both layers.
+The raw ROM parameters are in `tools/data/synthex_rom.json`, copied from synthex-web's
+`tools/synthex-rom/data/rom_presets_raw.json` (the T41 EPROM recall routine's output).
+
+`python3 tests/presets_test.py` verifies the original 1,000 ROM bytes and the expanded bank
+against pre-compression checksums, with address/undefined-behavior sanitizers. Regeneration
+also compares every expanded patch byte against a full-size reference from `factory.ts` and
+restores the previous generated data if that comparison fails. Update the standalone bank
+checksum only after an intentional sound/name change. Software extension records have a
+200-bit limit and currently require identical layers; generation fails if a bank needs a larger
+format, rather than dropping settings.
 
 `fm1/build.sh` needs the JieLi toolchain (`~/.jieli/toolchain`, as fm1-harbor) and, on macOS, Docker; `fm1/run.py`
 and `fm1/listen.py` need fm1-emu built from its master of 2026-10-19 or later.

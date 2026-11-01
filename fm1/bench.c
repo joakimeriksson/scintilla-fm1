@@ -3,7 +3,8 @@
  * RTOS, no HAL, just the CPU. bench_mark() brackets each config's timed blocks (break on it with
  * --break-pc; the step counts are instructions). Results land in RAM for --dump:
  *   RES[0] "SXFB", RES[1] configs, RES[2 + i] config i's hash,
- *   RES[64..] the first block of config 0 (512 words), to find where a mismatch starts */
+ *   RES[64..] the first block of config 0 (512 words), to find where a mismatch starts
+ *   RES[1024..1103] every decoded factory patch's byte hash */
 #include <stdint.h>
 #include "workload.h"
 
@@ -38,6 +39,7 @@ int main(void)
         bench_mark(2 * c + 1);
         RES[2 + c] = h;
     }
+    for (i = 0; i < SC_N_PRESETS; i++) RES[1024 + i] = wl_preset_hash(i);
     RES[1] = WL_N;
     RES[0] = 0x42465853u;        /* "SXFB" */
     bench_mark(0xFFFFu);

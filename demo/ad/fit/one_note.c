@@ -33,7 +33,7 @@ int main(int argc, char **argv)
 {
     if (argc < 6) { fprintf(stderr, "usage: one_note OUT.raw NOTE ON_S OFF_S DUR_S [field=value ...]\n"); return 2; }
     static sc_patch_t p;
-    p = SC_PRESETS[36];
+    sc_preset_load(36, &p);
     for (int i = 6; i < argc; i++) {
         char *e = strchr(argv[i], '=');
         if (!e) return 2;

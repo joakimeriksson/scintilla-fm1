@@ -8,6 +8,7 @@
 set -e
 cd "$(dirname "$0")/.."
 mkdir -p build
+python3 tests/presets_test.py
 cc -O2 -Wall -Wextra -Wno-unused-function -o build/sc_render host/sc_render.c engine/sc_voice.c engine/sc_synth.c -lm
 cc -O2 -Wno-unused-function -DSC_TEST_GENERAL -o build/sc_render_general host/sc_render.c engine/sc_voice.c engine/sc_synth.c -lm
 # the per-sample path's skipped samples (cut_eval) against the staged render, over every LFO shape on the cutoff
