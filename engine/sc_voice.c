@@ -1202,9 +1202,10 @@ void sc_voice_render_lane(sc_voice_t *v, const sc_prep_t *p, int32_t *out, uint3
 
         /* the cutoff. VoiceCore evaluates it every sample and recomputes the coefficients at a block
          * start or once it has moved SC_CUTOFF_STEP. Here: the block's first sample always (a note-on
-         * can have moved it); then per sample while an LFO or the portamento moves it; while only the
-         * filter envelope moves it, the cutoff is monotone between the attack's peak and the next
-         * stage, so the sample it crosses the step on is found by bisection in w->e1 */
+         * can have moved it); then, while an LFO or the portamento moves it, on the samples the
+         * drivers' largest steps leave room for; while only the filter envelope moves it, the cutoff is
+         * monotone between the attack's peak and the next stage, so the sample it crosses the step on
+         * is found by a search in w->e1 (first_cross) */
         const int32_t key_c = (int32_t)(v->cur >> 16);
         const int key_per_sample = moving && p->kc_key;
         const int lfo_tracks = ((use & SC_USE_L1) && p->kc[0]) || ((use & SC_USE_L2) && p->kc[1]);
