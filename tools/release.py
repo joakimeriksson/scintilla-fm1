@@ -11,7 +11,7 @@
 check --quick leaves out tests/run.sh and fm1/run.py (a few minutes each). publish --dry-run prints what it would do.
 GitHub builds and signs the release (.github/workflows/release.yml), so a release's .fwsc is never replaced by hand:
 verify only compares it with the local build, which is bit for bit the same. V15 stays manual: fm1_install.py refuses
-its package. publish wants a passed listen of this very package. Needs a python with numpy and Pillow, gh signed in,
+its package. publish wants a passed listen of this very package, built (check) from HEAD, on an FM-1 that runs it. Needs a python with numpy and Pillow, gh signed in,
 uv for the FM-1."""
 import argparse
 import hashlib
@@ -147,6 +147,7 @@ def check(a):
     run(["sh", "-c", f"{env} sh tests/run_host.sh"], fw)
     shutil.copy(package(a.version), fw / "build" / "scintilla.fwsc")   # (what tests/emu_test.py boots: this package)
     run(["sh", "-c", f"{env} python3 tests/emu_test.py"], fw)
+    built(a.version).write_text(f"{head()}\n{sha(package(a.version))}\n")
     print(f"ok   {package(a.version)}\n     sha256 {sha(package(a.version))}\n"
           f"next: tools/release.py install {a.version}")
 
@@ -167,11 +168,39 @@ def stamp(v):
     return ROOT / "firmware" / "build" / f"listened-{v}.txt"
 
 
+def built(v):
+    """check's record: the commit the package was built from, and its sha"""
+    return ROOT / "firmware" / "build" / f"built-{v}.txt"
+
+
+def head():
+    return out("git", "rev-parse", "HEAD")
+
+
+def built_from(v):
+    """the commit check built this package from, if the package is still that build"""
+    pkg = package(v)
+    if not built(v).exists() or not pkg.exists():
+        return None
+    commit, digest = (built(v).read_text().split() + ["", ""])[:2]
+    return commit if digest == sha(pkg) else None
+
+
+def running_identity():
+    """fm1_install.py --info's line: the identity, and whether the firmware runs (not the update loader)"""
+    line = out(*install_tool("--info")).splitlines()[-1]
+    return line.split()[0], "[running]" in line
+
+
 def listen(a):
     """fm1_listen.py on the connected FM-1, which must be running this version"""
     pkg = package(a.version)
     if not pkg.exists():
         die(f"no {pkg}: tools/release.py check {a.version}")
+    ident, running = running_identity()
+    if ident != identity(a.version) or not running:
+        die(f"the FM-1 runs {ident}{'' if running else ' (in update mode)'}, not {identity(a.version)}: "
+            f"tools/release.py install {a.version}")
     deps = ["--with", "sounddevice", "--with", "numpy", "--with", "mido", "--with", "python-rtmidi"]
     run(["uv", "run", "-q", "--no-project"] + deps + ["python", "-I", "tools/fm1_listen.py"])
     stamp(a.version).write_text(sha(pkg) + "\n")
@@ -221,15 +250,27 @@ def publish(a):
         die(f"no {pkg}: tools/release.py check {v}")
     if not stamp(v).exists() or stamp(v).read_text().strip() != sha(pkg):
         die(f"this package has not been heard on an FM-1: tools/release.py install {v}")
-    head = out("git", "rev-parse", "--short", "HEAD")
+    if built_from(v) != head():
+        die(f"this package was not built from HEAD ({head()[:12]}): GitHub builds the tag from HEAD, so its package "
+            f"would differ; tools/release.py check {v}, then install it again")
+    head_ = out("git", "rev-parse", "--short", "HEAD")
     if a.dry_run:
-        print(f"would tag {head} v{v}, push it, wait for the build, then verify\nthe notes:\n\n{notes(v)}")
+        print(f"would tag {head_} v{v}, push it, wait for the build, then verify\nthe notes:\n\n{notes(v)}")
         return
-    ask(f"Tag {head} v{v}? This publishes it, and the hub lists it within three hours", a.yes)
+    ask(f"Tag {head_} v{v}? This publishes it, and the hub lists it within three hours", a.yes)
     run(["git", "tag", "-a", f"v{v}", "-m", f"Scintilla {v}"])
-    run(GIT + ["push", "-q", ORIGIN, f"v{v}"])
-    wait_for_build(v)
-    verify(a)
+    try:
+        run(GIT + ["push", "-q", ORIGIN, f"v{v}"])
+    except SystemExit:
+        run(["git", "tag", "-d", f"v{v}"])      # (the push failed: nothing is published, a rerun can tag again)
+        raise
+    try:
+        wait_for_build(v)
+        verify(a)
+    except SystemExit as e:
+        raise SystemExit(f"{e}\nv{v} is tagged and its release is public: look at the release's build, then either fix "
+                         f"and release the next version, or delete the release and the tag (gh release delete v{v} "
+                         f"-R {REPO} --cleanup-tag)") from None
     with tempfile.NamedTemporaryFile("w", suffix=".md") as f:
         f.write(notes(v))
         f.flush()
