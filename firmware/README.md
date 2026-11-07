@@ -34,8 +34,8 @@ there, as a firmware of its own on [Dinghy](https://github.com/zvenson/dinghy) 0
 | **USB audio** | class compliant, no driver: the computer records what the FM-1 plays (stereo, 44.1 or 48 kHz) |
 
 The preset, the octave and the page are kept in flash. Edits to a sound are not kept (yet): the `*` after the
-address says the sound differs from the preset. A change of MODE, SPLIT, VOICES or KEYS starts the sound again (what
-sounds stops), so that no note is left where its note-off cannot reach it. Not on the pages, because neither the
+address says the sound differs from the preset. A change of MODE, SPLIT, VOICES or KEYS releases what
+sounds (its tails and the reverb go on), so that no note is left where its note-off cannot reach it. Not on the pages, because neither the
 engine nor synthex-web's VoiceCore plays them: the master and fine tune, a layer's pan, velocity into the filter
 envelope. The top right shows the CPU: the slowest render of the last second,
 as a part of the 5.8 ms the audio interrupt has.
@@ -65,7 +65,8 @@ What `tests/emu_test.py` checks, on fm1-emu's emulated FM-1 (fm1-live, headless)
   firmware had before the note (the chorus runs freely);
 - PRESETS loads the right sound, KNOB1 moves the cutoff by its steps;
 - **every page**: each knob of each page, turned a detent, moves its own field of the sound (90 fields on 26 pages);
-  a page button pressed again goes to the next page, held to the one before;
+  a page button pressed again goes to the next page, held to the one before; a change of VOICES releases a held
+  note; the stick turned right reaches the engine;
 - eight voices of Ring mod., the heaviest factory sound, by the firmware's own meter (53 % of a block);
 - MIDI into the DIN jack: a program change and a note; the sustain pedal holds a note (struck twice: two voices)
   until it comes up; CC 71, 72 and 73. The pedal over USB too;

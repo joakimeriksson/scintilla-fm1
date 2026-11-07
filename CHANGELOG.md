@@ -12,6 +12,10 @@
 - CC 71 resonance, CC 72 release and CC 73 attack (both envelopes), as PROPHET's.
 - The OUTPUT page's TUNE knob is gone: neither the engine nor synthex-web plays the master tune.
 - The pages are numbered anew: the page saved by 0.1 or 0.2 opens as the same page.
+- The pitch routes (LFO to OSC 1 / OSC 2, ENV1 to OSC 2) turn by ratios and show three decimals under 0.1: the
+  presets' vibratos are 0.005..0.04.
+- Fixed: the stick turned right (ALGORITHM, or STICK X) did not reach the sound since 0.2's aftertouch: LFO 2 into
+  the filter did nothing.
 
 ## 0.2.0 (2026-11-01)
 

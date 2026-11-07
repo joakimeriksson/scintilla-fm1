@@ -18,7 +18,7 @@
  *                     GLO   GLIDE + KEYS, SETTINGS, GLIDE TO, OSC GLIDE
  *                     FX    CHORUS, REVERB, OUTPUT
  *                     SEL   JOYSTICK (SEL again centres the stick)
- *                   A change of MODE, SPLIT, VOICES or KEYS starts the sound again (what sounds stops)
+ *                   A change of MODE, SPLIT, VOICES or KEYS releases what sounds
  *   SETTINGS        TOUCH (aftertouch) on, its DEPTH, its FLOOR (a key's pressure under it is none),
  *                   VELO (velocity) on (off: the keys play at 100); kept in flash
  *   SELECT          the joystick up and down: pitch bend (and the filter, by the BEND sliders)
@@ -175,7 +175,7 @@ enum { K_LIN, K_EXP, K_EXP0, K_ENUM, K_CHORUS, K_REVERB, K_INT, K_NOTE };   /* Q
                                                  * REVERB: an int8 on and its mode, OFF first; INT: an int8 by ones;
                                                  * NOTE: an int8 by semitones, as a note's name */
 enum { U_NUM, U_SEC, U_HZ, U_CENT, U_ST, U_PCT };
-enum { F_RESTART = 1 };                         /* a change starts the sound again (the voices' routing moves) */
+enum { F_RESTART = 1 };                         /* a change releases what sounds (the voices' routing moves) */
 #define NO_OFF 0xFFFFu
 typedef struct {
     const char *name;                           /* 0: no parameter on this knob */
@@ -219,6 +219,8 @@ static struct { int8_t layer; } edit;           /* the layers a layer's paramete
 #define ENUM(n, f, lo, hi, l) { n, W_LAYER, K_ENUM, U_NUM, LO(f), NO_OFF, lo, hi, 1, l }
 #define ONOFF(n, f) ENUM(n, f, 0, 1, L_OFFON)
 #define MM(n, slot) LIN(n, mm[slot], 0, 1, 0.01, U_NUM)
+#define MMP(n, slot) { n, W_LAYER, K_EXP0, U_NUM, LO(mm[slot]), NO_OFF, Q(0.001), Q(1), Q(0.001), 0 }   /* a pitch
+                                                 * route (1 = 12 st; the presets' vibratos 0.005..0.04): by ratios */
 #define PLIN(n, f) { n, W_PATCH, K_LIN, U_NUM, PO(f), NO_OFF, 0, Q(1), Q(0.01), 0 }
 #define PERF(n, f) { n, W_PERF, K_LIN, U_NUM, FO(f), NO_OFF, 0, Q(1), Q(0.01), 0 }
 #define NONE { 0 }
@@ -227,7 +229,7 @@ static struct { int8_t layer; } edit;           /* the layers a layer's paramete
 #define LFO(k, m) { EXP("RATE", lfo[k].rate, 0.05, 30, U_HZ), ENUM("SHAPE", lfo[k].shape, 0, 6, L_LFO), \
                  { "DELAY", W_LAYER, K_EXP0, U_SEC, LO(lfo[k].delay), NO_OFF, Q(0.001), Q(30), Q(0.001), 0 }, \
                  ONOFF("KEY SYNC", lfo[k].sync) }, \
-               { MM("OSC 1", SC_MM_L##m##_P1), MM("OSC 2", SC_MM_L##m##_P2), MM("CUTOFF", SC_MM_L##m##_CUT), \
+               { MMP("OSC 1", SC_MM_L##m##_P1), MMP("OSC 2", SC_MM_L##m##_P2), MM("CUTOFF", SC_MM_L##m##_CUT), \
                  MM("AMP", SC_MM_L##m##_AMP) }, \
                { MM("PW 1", SC_MM_L##m##_PW1), MM("PW 2", SC_MM_L##m##_PW2), \
                  LIN("DEPTH A", lfo[k].depth_a, 0, 1, 0.01, U_NUM), LIN("DEPTH B", lfo[k].depth_b, 0, 1, 0.01, U_NUM) }
@@ -262,7 +264,7 @@ static const prm_t PAGE[][4] = {
       MM("Y>CUT", SC_MM_JY_CUT) },
     { ADSR(env_f) },
     { ADSR(env_a) },
-    { MM("ENV1>OSC 2", SC_MM_E1_P2), MM("VELO>AMP", SC_MM_VEL_AMP), NONE, NONE },
+    { MMP("ENV1>OSC 2", SC_MM_E1_P2), MM("VELO>AMP", SC_MM_VEL_AMP), NONE, NONE },
     /* LFO */
     LFO(0, 1),                                  /* (lfo[0] is LFO 1, its routes SC_MM_L1_*) */
     LFO(1, 2),
@@ -309,6 +311,8 @@ static const struct { uint8_t btn, first, n; } GROUP[] = {
     {BTN_SEL, 25, 1}};
 #define N_GROUPS (sizeof GROUP / sizeof GROUP[0])
 #define PG_LAYERS 5u
+#define PG_FENV 8u                              /* FILTER ENV, AMP ENV: ATTACK .. RELEASE (CC 73, 72) */
+#define PG_AENV 9u
 #define PG_STICK 25u
 _Static_assert(N_PAGES == 26 && PG_STICK + 1u == N_PAGES, "GROUP covers every page, in order");
 
@@ -417,6 +421,7 @@ static void prm_text(char *b, const prm_t *p, int32_t v)
     }
     if (p->kind == K_NOTE) {                    /* 60 = C4 */
         static const char NAMES[] = "C C#D D#E F F#G G#A A#B ";
+        v = clamp32(v, 0, 127);
         b[0] = NAMES[2 * (v % 12)];
         b[1] = NAMES[2 * (v % 12) + 1];
         fmt_int(b + (b[1] == ' ' ? 1 : 2), v / 12 - 1);
@@ -437,7 +442,10 @@ static void prm_text(char *b, const prm_t *p, int32_t v)
         break;
     case U_CENT: fmt_int(b + i, (a + 32768) >> 16); str_cpy(b + str_len(b), "c", 4); break;
     case U_ST: fmt_int(b + i, (a + 32768) >> 16); str_cpy(b + str_len(b), "st", 4); break;
-    default: fmt_dec(b + i, (int32_t)(((int64_t)a * 100 + 32768) >> 16), 2); break;
+    default:                                    /* (under 0.1: three decimals, for the pitch routes) */
+        if (a && a < Q(0.1)) fmt_dec(b + i, (int32_t)(((int64_t)a * 1000 + 32768) >> 16), 3);
+        else fmt_dec(b + i, (int32_t)(((int64_t)a * 100 + 32768) >> 16), 2);
+        break;
     }
 }
 
@@ -464,10 +472,12 @@ static uint8_t sounding[128];                   /* notes on, from the keys and f
 static uint8_t sus_offs[128], sustain;          /* note-offs the pedal holds back; the pedal down */
 static uint32_t sus_pending;                    /* some of them are still to be sent (the queue was full) */
 static int32_t note_ms;                         /* when a note last started or stopped */
+static void sus_release(void);
 
 static void note_on(uint32_t note, uint32_t vel)
 {
     if (note > 127u || !vel) return;
+    if (sus_pending && !sustain) sus_release();   /* (what the pedal held back goes first, not after this one) */
     sc_post(&syn, SC_EV_NOTE_ON, (uint8_t)note, (int32_t)(vel * 516u));   /* 516 = 65536 / 127 */
     if (sounding[note] < 255u) sounding[note]++;
     note_ms = (int32_t)fm1_ms;
@@ -518,16 +528,21 @@ static void load(uint32_t i)
     uint32_t n;
     load_req = 0;                               /* (the interrupt leaves staged alone while it is written) */
     __asm__ volatile("" ::: "memory");
-    if (i < SC_N_PRESETS) sc_preset_load(i, &staged);
-    else staged = syn.patch;                    /* (restart(): the sound as edited) */
+    sc_preset_load(i, &staged);
     __asm__ volatile("" ::: "memory");
     load_req = 1;
     for (n = 0; n < 128u; n++) sounding[n] = 0;
     sus_clear();
 }
-/* the sound as edited, started again: a change of the voices' routing (MODE, SPLIT, VOICES, KEYS) would leave a
- * sounding note where its note-off does not reach it */
-static void restart(void) { load(SC_N_PRESETS); }
+/* a change of the voices' routing (MODE, SPLIT, VOICES, KEYS) would leave a sounding note where its note-off does
+ * not reach it: every voice is released first (their tails, the reverb's and the bend go on), then the patch */
+static void restart(void)
+{
+    uint32_t n;
+    sc_post(&syn, SC_EV_ALL_OFF, 0, 0);
+    for (n = 0; n < 128u; n++) sounding[n] = 0;
+    sus_clear();
+}
 
 /* ---- the screen */
 #define C_ACC RGB(255, 150, 60)                 /* the Synthex's orange */
@@ -801,7 +816,7 @@ static void aftertouch(uint32_t keys)
         p = at_applied;
     at_applied = (uint8_t)p;
     x = -(int32_t)(p * 516u * (uint32_t)set.at_depth / 100u);   /* 0..127 -> 0..-DEPTH, Q16, as CC1 */
-    if (x > perf.joy_x) x = perf.joy_x;         /* (never less left than the stick is set) */
+    if (!p || x > perf.joy_x) x = perf.joy_x;   /* (never less left than the stick is set; none: the stick) */
     if (x != syn.perf.joy_x) {
         syn.perf.joy_x = x;
         perf_dirty = 1;
@@ -867,7 +882,7 @@ static void app_loop(void)
     if (b & (1u << BTN_OCT_UP) && set.oct < 2) { set.oct++; dirty = 1; t_change = fm1_ms; }
     for (k = 0; k < N_GROUPS; k++)          /* a group's button: its first page; pressed again, the next (on its */
         if (b & (1u << GROUP[k].btn)) {     /* release) or, held, the one before */
-            uint32_t in = set.page >= GROUP[k].first && set.page < GROUP[k].first + GROUP[k].n;
+            uint32_t in = group_of(set.page) == k;
             if (in && GROUP[k].first == PG_STICK) {          /* SEL on the joystick page: centre it */
                 perf.joy_x = perf.joy_y = 0;
                 syn.perf.joy_x = syn.perf.joy_y = 0;
@@ -909,7 +924,7 @@ static void app_loop(void)
             if (p->where == W_PERF) *(int32_t *)((uint8_t *)&perf + p->off) = *field32(0, p, p->off);
             else edited = 1;
             if (p->flags & F_RESTART) restart();
-            else patch_dirty = 1;
+            patch_dirty = 1;
         }
     for (k = 0; k < 2u; k++)                /* SELECT: the stick up / down; ALGORITHM: left / right */
         if ((d = fm1_enc_take(k ? ENC_ALGORITHM : ENC_SELECT)) != 0) {
@@ -934,13 +949,11 @@ static void app_loop(void)
             if (d2 >= 64u) sustain = 1;
             else if (sustain) { sustain = 0; sus_release(); }
         } else if (ty == 0xB0u && d1 >= 71u && d1 <= 74u) {  /* resonance, release, attack, cutoff (as PROPHET's) */
-            static const prm_t CC_RESO = LIN("RESO", reso, 0, 1, 0.01, U_NUM), CC_CUT = LIN("CUTOFF", cutoff, 0, 1, 0.01, U_NUM);
-            static const prm_t CC_R[2] = { EXP("RELEASE", env_a.r, 0.001, 15, U_SEC), EXP("RELEASE", env_f.r, 0.001, 15, U_SEC) };
-            static const prm_t CC_A[2] = { EXP("ATTACK", env_a.a, 0.001, 15, U_SEC), EXP("ATTACK", env_f.a, 0.001, 15, U_SEC) };
-            if (d1 == 71u) prm_cc(&CC_RESO, d2);
-            else if (d1 == 72u) { prm_cc(&CC_R[0], d2); prm_cc(&CC_R[1], d2); }
-            else if (d1 == 73u) { prm_cc(&CC_A[0], d2); prm_cc(&CC_A[1], d2); }
-            else prm_cc(&CC_CUT, d2);                        /* (0..1, as 0.2's) */
+            static const prm_t CC_CUT = LIN("CUTOFF", cutoff, 0, 1, 0.01, U_NUM);   /* (0..1, as 0.2's) */
+            if (d1 == 71u) prm_cc(&PAGE[0][1], d2);           /* HOME's RESO */
+            else if (d1 == 72u) { prm_cc(&PAGE[PG_FENV][3], d2); prm_cc(&PAGE[PG_AENV][3], d2); }
+            else if (d1 == 73u) { prm_cc(&PAGE[PG_FENV][0], d2); prm_cc(&PAGE[PG_AENV][0], d2); }
+            else prm_cc(&CC_CUT, d2);
             edited = 1;
             patch_dirty = 1;
         } else if (ty == 0xB0u && (d1 == 91u || d1 == 93u)) {   /* the reverb's mix, the chorus's */
@@ -970,7 +983,7 @@ static void app_loop(void)
     fm1_led_key(BTN_OCT_DOWN, set.oct < 0);
     fm1_led_key(BTN_OCT_UP, set.oct > 0);
     for (k = 0; k < N_GROUPS; k++)
-        fm1_led_key(GROUP[k].btn, set.page >= GROUP[k].first && set.page < GROUP[k].first + GROUP[k].n);
+        fm1_led_key(GROUP[k].btn, group_of(set.page) == k);
 
     /* redraw only what changed */
     cpu = cpu_pub * 100u / BLOCK_TICKS;

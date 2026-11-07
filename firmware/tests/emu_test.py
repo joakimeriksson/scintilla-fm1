@@ -90,6 +90,9 @@ def fields(names):
     c = SRC / "build" / "fields.c"
     rows = []
     for n in names:
+        if n == "sizeof patch":                 # (where syn.perf starts: right after syn.patch)
+            rows.append('printf("%zu 0 0\\n", sizeof(sc_patch_t));')
+            continue
         ty, f, var = ("sc_perf_t", n[5:], "q") if n.startswith("perf.") else ("sc_patch_t", n, "p")
         rows.append(f'printf("%zu %zu %d\\n", offsetof({ty}, {f}), sizeof {var}.{f}, (int)({var}.{f}));')
     c.write_text('#include <stdio.h>\n#include <stddef.h>\n#include "sc_presets.h"\n#include "sc_synth.h"\n'
@@ -104,9 +107,10 @@ def fields(names):
 
 def pages_check():
     """turn each knob of each page one detent (down, or up from 0), on the first preset: each field moves (the
-    layer's in the upper, which a single patch edits; MODE makes it split, and from then on both)"""
+    layer's in the upper, which a single patch edits; MODE makes it split, and from then on both). The stick's in
+    the engine's copy (syn.perf), the one it plays (the stick turned right, STICK X up from 0, must stay there)"""
     names = [n for _, pgs in PAGES for pg in pgs for n in pg if n]
-    fs = fields(sorted(set(names)))
+    fs = fields(sorted(set(names)) + ["sizeof patch"])
     ev, t = [], 400
     for btn, pgs in PAGES:
         for pg in pgs:
@@ -118,11 +122,11 @@ def pages_check():
                     t += 120
     _, _ = emu.run(",".join(ev), t + 400, OUT / "pages", ram=True)
     ram = (OUT / "pages" / "ram.bin").read_bytes()
-    syn, perf = sym("syn"), sym("perf")
+    syn = sym("syn")
     still = []
     for n in sorted(set(names)):
         off, size, was = fs[n]
-        base = perf if n.startswith("perf.") else syn
+        base = syn + fs["sizeof patch"][0] if n.startswith("perf.") else syn
         now = int.from_bytes(ram[base + off:base + off + size], "little", signed=True)
         if now == was:
             still.append(n)
@@ -311,6 +315,14 @@ def main():
         pg.append((OUT / f"grp_{name}" / "ram.bin").read_bytes()[st + 1])
     check("page_buttons", pg == [2, 5, 6], f"EDIT again: page {pg[0]} (want 2); held: {pg[1]} (5); held, ENV pressed: "
           f"{pg[2]} (6)")
+
+    # a change of the voices' routing (LAYERS' VOICES here) releases what sounds: a note held (never let go) dies
+    # away after it, and plays on without it
+    lay = "800:m903c64,1000:6,1060:6^,1200:6,1260:6^,1400:6,1460:6^,1600:6,1660:6^,1800:6,1860:6^"
+    kept, _ = emu.run(lay, 4200, OUT / "route_none")
+    cut, _ = emu.run(lay + ",2000:e5:-1", 4200, OUT / "route_voices")
+    check("routing", peak(kept, 3.6, 4.1) > 10 * max(1, peak(cut, 3.6, 4.1)),
+          f"a note held, VOICES turned on LAYERS: {peak(cut, 3.6, 4.1)} 1.6 s later, {peak(kept, 3.6, 4.1)} without")
 
     # CC 71 / 72 / 73: resonance, both envelopes' release and attack
     _, _ = emu.run("700:mb04740,800:mb0487f,900:mb04900", 1400, OUT / "cc", ram=True)
