@@ -8,7 +8,9 @@
 SCRIPT is fm1-live's FM1_BENCH_KEYS: `ms:id` presses a key or a button by id (`ms:id^` releases;
 keys are 14 + k, k = 0 for F3 .. 26 for G5; buttons by their BTN_ number), `ms:eN:clicks` turns
 encoder N (0 SELECT, 1 ALGORITHM, 2..5 KNOB1..4, 6 PRESETS), `ms:mHEX` sends MIDI bytes.
-FM1_LIVE: fm1-live (default ~/work/fm1-emu/target/release/fm1-live)."""
+FM1_LIVE: fm1-live (default ~/work/fm1-emu/target/release/fm1-live). run(): flash, a flash image both runs start
+from and leave theirs in (fm1-live's --flash; made by the first); usb, 'MS:HEX;...' MIDI over USB (the screen's
+run only, so only in ram.bin and panel.png)."""
 import argparse, os, struct, subprocess, sys, tempfile, wave
 from pathlib import Path
 
@@ -16,23 +18,26 @@ SRC = Path(__file__).resolve().parents[1]
 LIVE = Path(os.environ.get("FM1_LIVE", Path.home() / "work/fm1-emu/target/release/fm1-live"))
 
 
-def run(keys, ms, out, fwsc=SRC / "build" / "scintilla.fwsc", ram=False):
+def run(keys, ms, out, fwsc=SRC / "build" / "scintilla.fwsc", ram=False, flash=None, usb=None):
     out = Path(out)
     out.mkdir(parents=True, exist_ok=True)
     env = dict(os.environ, FM1_BENCH_KEYS=keys)
     with tempfile.TemporaryDirectory() as wd:
         (Path(wd) / "work").mkdir()
         raw = Path(wd) / "audio.raw"
-        r = subprocess.run([str(LIVE), "--fwsc", str(fwsc), "--bench", str(ms)], cwd=wd, capture_output=True,
+        fl = ["--flash", str(Path(flash).resolve())] if flash else []
+        r = subprocess.run([str(LIVE), "--fwsc", str(fwsc), *fl, "--bench", str(ms)], cwd=wd, capture_output=True,
                            text=True, env=dict(env, FM1_BENCH_WAV=str(raw)))
         if r.returncode or not raw.exists():
             sys.exit(f"fm1-live --bench failed:\n{r.stdout[-2000:]}{r.stderr[-2000:]}")
         pcm = raw.read_bytes()
         with wave.open(str(out / "audio.wav"), "wb") as w:
             w.setnchannels(2); w.setsampwidth(2); w.setframerate(44100); w.writeframes(pcm)
-        env2 = dict(env, FM1_DUMPRAM=str(out / "ram.bin")) if ram else env
-        r2 = subprocess.run([str(LIVE), "--fwsc", str(fwsc), "--shot", str(ms)], cwd=wd, capture_output=True,
-                            text=True, env=env2)
+        env2 = dict(env, FM1_DUMPRAM=str(out / "ram.bin")) if ram else dict(env)
+        if usb:
+            env2["FM1_USB_SEND"] = usb
+        r2 = subprocess.run([str(LIVE), "--fwsc", str(fwsc), *fl, *(["--usb"] if usb else []), "--shot", str(ms)],
+                            cwd=wd, capture_output=True, text=True, env=env2)
         log = r.stdout + r.stderr + r2.stdout + r2.stderr
         from PIL import Image
         img = Image.open(Path(wd) / "work" / "panel.ppm")

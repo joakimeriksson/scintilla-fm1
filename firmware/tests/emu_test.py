@@ -5,7 +5,7 @@
 Each case boots build/scintilla.fwsc with a key / encoder / MIDI script (tests/emu.py) and checks the
 sound, and the firmware's own state in a RAM dump at the end (by symbol, from build/scintilla.syms).
 FM1_LIVE: fm1-live (default ~/work/fm1-emu/target/release/fm1-live); fm1-emu is next to it."""
-import os, re, struct, subprocess, sys, tempfile
+import os, re, struct, subprocess, sys, tempfile, zlib
 from pathlib import Path
 import numpy as np
 
@@ -51,6 +51,87 @@ def patch_offsets():
     exe = SRC / "build" / "offsets"
     subprocess.run([*cc(), "-I", str(SRC.parent / "engine"), "-o", str(exe), str(c)], check=True)
     return [int(x) for x in subprocess.run([str(exe)], capture_output=True, text=True).stdout.split()]
+
+
+# Every knob of every page, as the page table has them (firmware/src/scintilla.c PAGE): the group's button,
+# then for each page its four fields (in sc_patch_t, or "perf." in sc_perf_t; None: a knob this test leaves alone)
+L0 = "layer[0]."
+PAGES = [
+    (8, [[L0 + "cutoff", L0 + "reso", L0 + "env_amt", L0 + "env_a.r"]]),
+    (6, [[L0 + "o1_wave", L0 + "o1_oct", L0 + "o1_pwm", L0 + "mix_o1"],
+         [L0 + "o2_wave", L0 + "o2_oct", L0 + "o2_detune", L0 + "mix_o2"],
+         [L0 + "o2_pwm", L0 + "o2_sync", L0 + "cross", L0 + "cross2"],
+         [L0 + "mix_noise", L0 + "noise_pink", L0 + "ring", None],
+         [None, "voice_mode", "split", "polyphony"]]),
+    (4, [[L0 + "flt_mode", L0 + "cutoff", L0 + "reso", L0 + "key_track"],
+         [L0 + "env_amt", L0 + "mm[SC_MM_E1_CUT]", L0 + "mm[SC_MM_VEL_CUT]", L0 + "mm[SC_MM_JY_CUT]"],
+         [L0 + "env_f.a", L0 + "env_f.d", L0 + "env_f.s", L0 + "env_f.r"],
+         [L0 + "env_a.a", L0 + "env_a.d", L0 + "env_a.s", L0 + "env_a.r"],
+         [L0 + "mm[SC_MM_E1_P2]", L0 + "mm[SC_MM_VEL_AMP]", None, None]]),
+    (5, [*[pg for k, m in ((0, 1), (1, 2)) for pg in (
+            [L0 + f"lfo[{k}].rate", L0 + f"lfo[{k}].shape", L0 + f"lfo[{k}].delay", L0 + f"lfo[{k}].sync"],
+            [L0 + f"mm[SC_MM_L{m}_P1]", L0 + f"mm[SC_MM_L{m}_P2]", L0 + f"mm[SC_MM_L{m}_CUT]", L0 + f"mm[SC_MM_L{m}_AMP]"],
+            [L0 + f"mm[SC_MM_L{m}_PW1]", L0 + f"mm[SC_MM_L{m}_PW2]", L0 + f"lfo[{k}].depth_a", L0 + f"lfo[{k}].depth_b"])],
+         ["perf.lfo2_osc", "perf.lfo2_filt", L0 + "mm[SC_MM_JX_L1]", L0 + "mm[SC_MM_JX_L2]"]]),
+    (7, [[L0 + "glide_mode", L0 + "glide_amt", L0 + "glide_time", L0 + "key_assign"],
+         [None, None, None, None],
+         [L0 + "glide_o1", L0 + "glide_o2", L0 + "multi_trigger", "unison_detune"],
+         [L0 + "o1_glide_amt", L0 + "o1_glide_speed", L0 + "o2_glide_amt", L0 + "o2_glide_speed"]]),
+    (2, [["fx.chorus.on", "fx.chorus.rate", "fx.chorus.depth", "fx.chorus.mix"],
+         ["fx.reverb.on", "fx.reverb.size", "fx.reverb.damping", "fx.reverb.mix"],
+         ["volume", "limiter", None, None]]),
+    (3, [["perf.joy_x", "perf.joy_y", "perf.bend_osc", "perf.bend_filt"]]),
+]
+
+
+def fields(names):
+    """{name: (offset, size, the first preset's value)} by the host's compiler (sc_patch_t and sc_perf_t are int8
+    and int32 only: the FM-1's layout)"""
+    c = SRC / "build" / "fields.c"
+    rows = []
+    for n in names:
+        if n == "sizeof patch":                 # (where syn.perf starts: right after syn.patch)
+            rows.append('printf("%zu 0 0\\n", sizeof(sc_patch_t));')
+            continue
+        ty, f, var = ("sc_perf_t", n[5:], "q") if n.startswith("perf.") else ("sc_patch_t", n, "p")
+        rows.append(f'printf("%zu %zu %d\\n", offsetof({ty}, {f}), sizeof {var}.{f}, (int)({var}.{f}));')
+    c.write_text('#include <stdio.h>\n#include <stddef.h>\n#include "sc_presets.h"\n#include "sc_synth.h"\n'
+                 'int main(void){sc_patch_t p; sc_perf_t q; sc_preset_load(0, &p); sc_perf_default(&q);\n'
+                 + "\n".join(rows) + "}\n")
+    exe = SRC / "build" / "fields"
+    e = SRC.parent / "engine"
+    subprocess.run([*cc(), "-I", str(e), "-o", str(exe), str(c), str(e / "sc_synth.c"), str(e / "sc_voice.c")], check=True)
+    out = subprocess.run([str(exe)], capture_output=True, text=True).stdout.split("\n")
+    return {n: tuple(int(x) for x in ln.split()) for n, ln in zip(names, out)}
+
+
+def pages_check():
+    """turn each knob of each page one detent (down, or up from 0), on the first preset: each field moves (the
+    layer's in the upper, which a single patch edits; MODE makes it split, and from then on both). The stick's in
+    the engine's copy (syn.perf), the one it plays (the stick turned right, STICK X up from 0, must stay there)"""
+    names = [n for _, pgs in PAGES for pg in pgs for n in pg if n]
+    fs = fields(sorted(set(names)) + ["sizeof patch"])
+    ev, t = [], 400
+    for btn, pgs in PAGES:
+        for pg in pgs:
+            ev += [f"{t}:{btn}", f"{t + 60}:{btn}^"]
+            t += 200
+            for k, n in enumerate(pg):
+                if n:
+                    ev.append(f"{t}:e{2 + k}:{-1 if fs[n][2] else 1}")
+                    t += 120
+    _, _ = emu.run(",".join(ev), t + 400, OUT / "pages", ram=True)
+    ram = (OUT / "pages" / "ram.bin").read_bytes()
+    syn = sym("syn")
+    still = []
+    for n in sorted(set(names)):
+        off, size, was = fs[n]
+        base = syn + fs["sizeof patch"][0] if n.startswith("perf.") else syn
+        now = int.from_bytes(ram[base + off:base + off + size], "little", signed=True)
+        if now == was:
+            still.append(n)
+    check("pages", not still, f"{len(set(names))} fields on {sum(len(p) for _, p in PAGES)} pages, each moved by its knob"
+          if not still else f"not moved by their knob: {', '.join(still)}")
 
 
 def engine_ref():
@@ -163,7 +244,7 @@ def main():
     soft, _ = emu.run(on + "1000:20@50", 2000, OUT / "at_soft", ram=True)
     ram = (OUT / "at_soft" / "ram.bin").read_bytes()
     vel = ram[sym("key_vel") + 6]
-    check("settings", ram[st + 1] == 10 and ram[st + 3] == 1 and ram[st + 6] == 1,
+    check("settings", ram[st + 1] == 19 and ram[st + 3] == 1 and ram[st + 6] == 1,
           f"GLO twice: page {ram[st + 1]} (SETTINGS); TOUCH {ram[st + 3]}, VELO {ram[st + 6]}")
     hard, _ = emu.run(on + "1000:20@50,1300:20~127", 2000, OUT / "at_hard", ram=True)
     a_hard = (OUT / "at_hard" / "ram.bin").read_bytes()[at]
@@ -182,6 +263,77 @@ def main():
     s, _ = emu.run(on + "1000:m903c64,1300:md07f", 1800, OUT / "at_midi", ram=True)
     a_midi = (OUT / "at_midi" / "ram.bin").read_bytes()[at]
     check("midi_pressure", a_midi == 127, f"MIDI channel pressure 127: the stick at {a_midi} / 127")
+
+    # the sustain pedal (CC 64) into the DIN jack: a note let go under it sounds on until the pedal comes up; a
+    # note struck again under it takes a second voice, and the pedal's release lets both go
+    def held(script, name):
+        s, _ = emu.run(script, 4200, OUT / name, ram=True)
+        return s, (OUT / name / "ram.bin").read_bytes()
+    free, _ = held("800:m903c64,1200:m803c00", "sus_none")
+    ped, ram = held("700:mb0407f,800:m903c64,1200:m803c00,1500:m903c64,1700:m803c00,2600:mb04000", "sus_pedal")
+    sus = sym("sus_offs")
+    check("sustain", peak(ped, 2.0, 2.5) > 10 * max(1, peak(free, 2.0, 2.5)) and peak(ped, 3.7, 4.1) < 60
+          and not any(ram[sus:sus + 128]),
+          f"after the note-off: {peak(ped, 2.0, 2.5)} with the pedal, {peak(free, 2.0, 2.5)} without; 1.1 s after the "
+          f"pedal is up (two voices of the note): {peak(ped, 3.7, 4.1)}")
+
+    # the pedal over USB (fm1-live's FM1_USB_SEND, the screen's run: RAM only): down, a note and its note-off, the
+    # note-off held back; then up, none left
+    sus_on, sus_n = sym("sustain"), sym("sus_offs") + 0x3C
+    usb = "1500:b0407f;1600:903c64;1800:803c00"
+    _, _ = emu.run("", 2200, OUT / "sus_usb", ram=True, usb=usb)
+    down = (OUT / "sus_usb" / "ram.bin").read_bytes()
+    _, _ = emu.run("", 2400, OUT / "sus_usb_up", ram=True, usb=usb + ";2100:b04000")
+    up = (OUT / "sus_usb_up" / "ram.bin").read_bytes()
+    check("sustain_usb", down[sus_on] == 1 and down[sus_n] == 1 and up[sus_on] == 0 and up[sus_n] == 0,
+          f"CC64 over USB: the pedal {down[sus_on]}, the note-off held back {down[sus_n]}; up: {up[sus_on]}, {up[sus_n]}")
+
+    # an older version's settings (the record's length tells which): its page by its number here, 0.2's SETTINGS (10)
+    # on 19, 0.1's OUTPUT (10, before SETTINGS was) on 24; the rest of the record as it was
+    img = OUT / "flash.bin"
+    img.unlink(missing_ok=True)
+    emu.run("", 300, OUT / "flash", flash=img)
+    base = img.read_bytes()
+    got = []
+    for rec, want in ((bytes([3, 10, 1, 1, 50, 9, 1]), 19), (bytes([3, 10, 1]), 24)):
+        f = bytearray(base)
+        f[0xFC000:0xFD000] = b"\xff" * 0x1000
+        f[0xFC000:0xFC00C + len(rec)] = struct.pack("<3I", 0x59474E44, len(rec), zlib.crc32(rec)) + rec
+        img.write_bytes(bytes(f))
+        _, _ = emu.run("", 600, OUT / "flash", ram=True, flash=img)
+        ram = (OUT / "flash" / "ram.bin").read_bytes()
+        got.append((len(rec), ram[st + 1], want, ram[st:st + len(rec)] == bytes(rec[:1]) + bytes([want]) + rec[2:]))
+    check("settings_old", all(g[1] == g[2] and g[3] for g in got),
+          "; ".join(f"{n}-byte record: page {p} (want {w}){'' if ok else ', the rest moved'}" for n, p, w, ok in got))
+
+    # a group's button: pressed again, the next page; held 0.4 s, the one before; held while another group's is
+    # pressed, that one's page stays (EDIT is 1..5, ENV 6..10)
+    pg = []
+    for name, script in (("next", "200:6,300:6^,400:6,500:6^"), ("back", "200:6,300:6^,400:6,1000:6^"),
+                         ("other", "200:6,300:6^,400:6,500:4,600:4^,1100:6^")):
+        _, _ = emu.run(script, 1300, OUT / f"grp_{name}", ram=True)
+        pg.append((OUT / f"grp_{name}" / "ram.bin").read_bytes()[st + 1])
+    check("page_buttons", pg == [2, 5, 6], f"EDIT again: page {pg[0]} (want 2); held: {pg[1]} (5); held, ENV pressed: "
+          f"{pg[2]} (6)")
+
+    # a change of the voices' routing (LAYERS' VOICES here) releases what sounds: a note held (never let go) dies
+    # away after it, and plays on without it
+    lay = "800:m903c64,1000:6,1060:6^,1200:6,1260:6^,1400:6,1460:6^,1600:6,1660:6^,1800:6,1860:6^"
+    kept, _ = emu.run(lay, 4200, OUT / "route_none")
+    cut, _ = emu.run(lay + ",2000:e5:-1", 4200, OUT / "route_voices")
+    check("routing", peak(kept, 3.6, 4.1) > 10 * max(1, peak(cut, 3.6, 4.1)),
+          f"a note held, VOICES turned on LAYERS: {peak(cut, 3.6, 4.1)} 1.6 s later, {peak(kept, 3.6, 4.1)} without")
+
+    # CC 71 / 72 / 73: resonance, both envelopes' release and attack
+    _, _ = emu.run("700:mb04740,800:mb0487f,900:mb04900", 1400, OUT / "cc", ram=True)
+    ram = (OUT / "cc" / "ram.bin").read_bytes()
+    fs = fields([L0 + "reso", L0 + "env_a.r", L0 + "env_f.r", L0 + "env_a.a", L0 + "env_f.a"])
+    v = {n: struct.unpack_from("<i", ram, sym("syn") + o)[0] for n, (o, _, _) in fs.items()}
+    want = {L0 + "reso": 64 * 516, L0 + "env_a.r": 15 << 16, L0 + "env_f.r": 15 << 16, L0 + "env_a.a": 65, L0 + "env_f.a": 65}
+    check("cc", all(abs(v[n] - want[n]) <= want[n] // 16 for n in want),
+          "CC71 64, CC72 127, CC73 0: " + ", ".join(f"{n[len(L0):]} {v[n] / 65536:.3f}" for n in want))
+
+    pages_check()
 
     print(f"{len(failures)} failed" if failures else "all passed")
     return 1 if failures else 0

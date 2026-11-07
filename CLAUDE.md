@@ -92,6 +92,10 @@ the host build's. A mismatch is a bug (in the engine, the compiler or the emulat
   without the reverb. A key's pressure under 8 (SETTINGS' FLOOR) counts as none: any vibrato switches the
   voices' per-sample pitch path on (Ring mod. x8: 53 -> 63 % of a block), and a resting finger reads a count or
   two of noise.
+- The sustain pedal (CC 64; synthex-web's HOLD switch is the app's, not VoiceCore's) is the firmware's: it holds
+  back the note-offs, one counted for each (a note struck again under the pedal takes another voice, and each
+  note-off releases one), and sends them when the pedal comes up. A mono layer retriggers its held stack on each
+  of them, as it would on the keys.
 - One phase per oscillator, where VoiceCore keeps one per waveform: they differ only if the waveform changes
   mid-note.
 - Pitch is Q16 semitones (resolution 1.5e-5); portamento runs in Q32 and the glide offsets in Q24, because in Q16 a
@@ -133,6 +137,10 @@ the host build's. A mismatch is a bug (in the engine, the compiler or the emulat
   multiply-accumulate); master of 2026-10-19 runs it right. When the FM-1 and host disagree, rebuild the emulator
   before suspecting the code. `fm1/prim.h` tests the arithmetic primitives one by one; `fm1/trace.c` traces a
   voice's insides sample by sample on both.
+- **`firmware/src/scintilla.c` is also fm1-dock's module** (its `take.py` copies it; `sc_module.c` includes it): a
+  file-level name the module uses is a clash there, not here. `ui`, `note`, `cc`, `render`, `draw`, `init`,
+  `release`, `midi` are the module's (a static `ui` struct broke its build). Build it in a fm1-dock worktree with
+  `tools/hbmod.py modules/scintilla` after copying the engine and the app in.
 - **Hidden helper calls break the FM-1 link:** a 64-bit division (`__udivdi3`), even by a constant, and also
   `u / (12 << 16)` became a hardware divide where a table is cheaper. `fm1/build.sh` fails on the first; look at
   `build/fm1/bench.dis` for the second.
@@ -145,8 +153,8 @@ the host build's. A mismatch is a bug (in the engine, the compiler or the emulat
   (`80 f1 00 DS`) that master decodes since 2026-10-15 (and a stale fm1-emu once gave wrong bench hashes).
   `tests/emu_test.py` fails when fm1-live or fm1-emu is older than the fm1-emu checkout's last commit; rebuild
   with `cargo build --release -p fm1-live -p fm1-emu` (only `target/` changes).
-- `tests/emu.py`'s `ms:mHEX` MIDI goes into the DIN jack (fm1-live has no scripted USB-MIDI): the firmware reads
-  both. The `pi32v2` lays out int64 fields differently from the Mac, so read `sc_synth_t` from a RAM dump only
+- `tests/emu.py`'s `ms:mHEX` MIDI goes into the DIN jack: the firmware reads both. MIDI over USB is fm1-live's
+  `--usb` with `FM1_USB_SEND` (`emu.run(..., usb=)`), in the `--shot` run only: check it in `ram.bin`, not the audio. The `pi32v2` lays out int64 fields differently from the Mac, so read `sc_synth_t` from a RAM dump only
   through `sc_patch_t` (int8 / int32 only, the same layout) or by symbol.
 - fm1-emu's `--ram` must stay at or under 4 MiB: RAM starts at 0x01C00000, so more covers the code at
   0x02000000, the CPU fetches zeros, and the run "halts on a nop slide" after a few thousand steps.

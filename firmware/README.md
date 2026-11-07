@@ -16,24 +16,28 @@ there, as a firmware of its own on [Dinghy](https://github.com/zvenson/dinghy) 0
 | --- | --- |
 | **Keys** | play: two layers of 8 voices each, as the patch says (single, split, double), poly / mono / unison |
 | **PRESETS** | the 80 factory sounds: PRE 10..49 and MEM 10..49, the Synthex's addresses |
-| **KNOB1..4** | the four parameters on the screen. A change applies to both layers, each from its own value |
-| **HOME** | cutoff, resonance, filter envelope amount, amp release |
-| **EDIT** | OSC 1, OSC 2, MIX (press again for the next page) |
-| **ENV** | FILTER, FILTER ENV, AMP ENV |
-| **LFO** | LFO 1 (rate, shape, to pitch, to cutoff), LFO 2 (rate, shape, the joystick's two LFO 2 depths) |
-| **GLO** | glide mode, amount, speed; poly / mono / unison; press again: **SETTINGS** (below) |
-| **FX** | chorus (off, 1, 2, 3), volume, unison detune, tune; press again: reverb (off, plate, room, hall, galactic), size, damping, mix |
+| **KNOB1..4** | the four parameters on the screen. A layer's parameter goes to the layers LAYERS' EDIT picks (BOTH at first, each from its own value; a single sound has only the upper) |
+| **HOME** | cutoff, resonance, filter envelope amount, amp release, with the keys that sound |
+| **EDIT ENV LFO GLO FX SEL** | the pages: every parameter the engine plays, four to a page, a row for each knob. A button opens its first page; pressed again, the next; held (0.4 s), the one before. The screen shows where you are (`2/5`) |
+| **EDIT** | OSC 1 (wave, octave, PW, level), OSC 2 (wave, octave, detune, level), OSC 2 + (PW, sync, cross mod 1>2 and 2>1), MIX (noise, white / pink, ring mod), LAYERS (EDIT: both, upper or lower; MODE: single, split, double; the SPLIT point; VOICES) |
+| **ENV** | FILTER (mode, cutoff, resonance, key tracking), FILTER MOD (envelope amount, envelope 1, velocity and the stick's Y to the cutoff), FILTER ENV, AMP ENV, ENV MOD (envelope 1 to OSC 2, velocity to the amp) |
+| **LFO** | for each LFO: rate, shape, delay, key sync; to OSC 1, OSC 2, cutoff, amp; to PW 1, PW 2, depth A, depth B. Then STICK MOD: the stick's LFO 2 to the pitch and the cutoff, and its X into each LFO's depth |
+| **GLO** | GLIDE + KEYS (mode, amount, speed; poly / mono / unison), **SETTINGS** (below), GLIDE TO (OSC 1, OSC 2, retrigger, unison detune), OSC GLIDE (each oscillator's own swoop: amount, speed) |
+| **FX** | CHORUS (off, 1, 2, 3; rate, depth, mix), REVERB (off, plate, room, hall, galactic; size, damping, mix), OUTPUT (volume, limiter) |
 | **SEL** (`SCL` on the panel) | the joystick page: X, Y and the two BEND depths; SEL again centres the stick |
 | **SELECT** | the joystick up and down: pitch bend (and the filter, by the BEND depths) |
 | **ALGORITHM** | the joystick left and right: LFO 2 into the pitch (left) or the filter (right) |
 | **OCT- OCT+** | the octave |
-| **MIDI in** | USB and the DIN jack, any channel: notes with velocity, pitch bend (2 semitones), CC1 = the stick pushed left (vibrato, as on the Synthex), CC7 the volume, CC74 the cutoff, CC91 the reverb's mix and CC93 the chorus's (0 turns it off), program change, CC120 / 123, channel and poly pressure |
+| **MIDI in** | USB and the DIN jack, any channel: notes with velocity, pitch bend (2 semitones), CC1 = the stick pushed left (vibrato, as on the Synthex), CC7 the volume, **CC64 the sustain pedal** (the Synthex's HOLD: the keys' notes are held too; `HOLD` on the screen), CC71 the resonance, CC72 the release and CC73 the attack (both envelopes'), CC74 the cutoff (these four to the layers EDIT picks), CC91 the reverb's mix and CC93 the chorus's (0 turns it off), program change, CC120 / 123, channel and poly pressure |
 | **The keys** | the bottom two rows are force sensed (Velo's sensing): how hard a key lands is its velocity, and pressing a held key harder is **aftertouch**: the stick pushed left, vibrato, springing back as you ease off (the screen's STICK X follows it). MIDI's pressure does the same; the keys send their notes and poly pressure out over USB. The top row plays at 100 |
 | **SETTINGS** | both are **off** at first (the keys play at 100, pressing harder does nothing), as some sounds are better without: TOUCH turns aftertouch on, DEPTH is how far the hardest press pushes the stick (100 %: all the way), FLOOR the pressure under which a key's is none (8: above a resting finger's noise), VELO turns velocity on. Kept in flash |
 | **USB audio** | class compliant, no driver: the computer records what the FM-1 plays (stereo, 44.1 or 48 kHz) |
 
 The preset, the octave and the page are kept in flash. Edits to a sound are not kept (yet): the `*` after the
-address says the sound differs from the preset. The top right shows the CPU: the slowest render of the last second,
+address says the sound differs from the preset. A change of MODE, SPLIT, VOICES or KEYS releases what
+sounds (its tails and the reverb go on), so that no note is left where its note-off cannot reach it. Not on the pages, because neither the
+engine nor synthex-web's VoiceCore plays them: the master and fine tune, a layer's pan, velocity into the filter
+envelope. The top right shows the CPU: the slowest render of the last second,
 as a part of the 5.8 ms the audio interrupt has.
 
 Not there yet (see [`../PLAN.md`](../PLAN.md)): delay (the factory sounds play without it), saving
@@ -60,8 +64,13 @@ What `tests/emu_test.py` checks, on fm1-emu's emulated FM-1 (fm1-live, headless)
   (`tests/engine_ref.c`) to the MASTER knob's rounding (-60 dB), once the reference has run as many blocks as the
   firmware had before the note (the chorus runs freely);
 - PRESETS loads the right sound, KNOB1 moves the cutoff by its steps;
+- **every page**: each knob of each page, turned a detent, moves its own field of the sound (90 fields on 26 pages);
+  a page button pressed again goes to the next page, held to the one before; a change of VOICES releases a held
+  note; the stick turned right reaches the engine;
 - eight voices of Ring mod., the heaviest factory sound, by the firmware's own meter (53 % of a block);
-- MIDI into the DIN jack: a program change and a note;
+- MIDI into the DIN jack: a program change and a note; the sustain pedal holds a note (struck twice: two voices)
+  until it comes up; CC 71, 72 and 73. The pedal over USB too;
+- 0.1's and 0.2's saved settings open the page they were on, under its number here;
 - **the keys' force** (fm1-live's model of the keys' carbon pills, in fm1-emu since 2026-10-23): off at first;
   SETTINGS turns TOUCH and VELO on; a key landed softly plays at its velocity; pressing it harder is aftertouch (the stick pushed left, the sound moves from that
   moment), easing off lets go; MIDI channel pressure does the same.
