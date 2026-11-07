@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+**The firmware**
+
+- Every parameter the engine plays is on a page now (26 pages, 90 parameters), as PROPHET's in fm1-dock: a row for
+  each knob, its name, its value and a bar. HOME keeps its columns and the keys.
+- A page button held for 0.4 s goes back a page; the screen shows where in the group you are.
+- LAYERS: edit the upper, the lower or both layers; make a sound single, split (at a note) or double; its voices.
+- The sustain pedal (MIDI CC 64, the Synthex's HOLD), from USB and the DIN jack.
+- CC 71 resonance, CC 72 release and CC 73 attack (both envelopes), as PROPHET's.
+- The OUTPUT page's TUNE knob is gone: neither the engine nor synthex-web plays the master tune.
+- The pages are numbered anew: the page saved by 0.1 or 0.2 opens as the same page.
+
 ## 0.2.0 (2026-11-01)
 
 Identity `FM-1_96300200`. Everything here follows [synthex-web](https://github.com/joakimeriksson/ai-smarthome/tree/master/audio/software-synth/synthex),
