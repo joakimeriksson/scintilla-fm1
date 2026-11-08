@@ -26,10 +26,14 @@
  *   OCT- OCT+       the octave
  *   MIDI in         USB and the DIN jack, any channel: notes with velocity, pitch bend (2 semitones),
  *                   CC1 = the stick pushed left (vibrato, as on the Synthex), CC7 the volume, CC64 the
- *                   sustain pedal (the Synthex's HOLD: the keys' notes too), CC71 the resonance, CC72 the
- *                   release and CC73 the attack (both envelopes'), CC74 the cutoff (these four to the layers
- *                   EDIT picks), CC91 the reverb's mix and CC93 the chorus's (0 turns it off), program change,
- *                   CC120/123, channel and poly pressure (aftertouch)
+ *                   sustain pedal (the Synthex's HOLD: the keys' notes too), CC70 the cutoff, CC71 the
+ *                   resonance, CC72 the release and CC73 the attack (both envelopes'; CC70..73 as FADER BANK
+ *                   has them, below), CC74 the cutoff (these to the layers EDIT picks), CC91 the reverb's mix
+ *                   and CC93 the chorus's (0 turns it off), program change, CC120/123, channel and poly pressure
+ *   SMK-37          in fm1-dock on an SMK-37, its own buttons: KNOB BANK the layers the knobs edit (BOTH, UPPER,
+ *                   LOWER; a single sound: the LAYERS page), FADER BANK what its faders (CC70..73) do: PLAY
+ *                   (cutoff, resonance, release, attack), FILTER ENV, AMP ENV (A D S R), MIX (OSC 1, OSC 2,
+ *                   noise, envelope amount), < > the page before / after, through all of them
  *   aftertouch      the hardest press (a key's, or MIDI's) pushes the stick further left: vibrato, as CC1;
  *                   it springs back as the press eases. MIDI out: the keys' notes, and their poly pressure
  *                   while TOUCH is on
@@ -208,6 +212,13 @@ typedef struct {                                /* what survives a power-off (0.
 static set_t set;
 enum { ED_BOTH, ED_UPPER, ED_LOWER };
 static struct { int8_t layer; } edit;           /* the layers a layer's parameter goes to (LAYERS' EDIT) */
+/* the SMK-37's own buttons, from fm1-dock (its HB_F_XBTN; never on an FM-1), and their LEDs */
+enum { BTN_KNOB_BANK = 14, BTN_FADER_BANK = 15, BTN_LEFT = 16, BTN_RIGHT = 17 };
+#ifdef HB_LED_XBTN
+#define XLED(b, on) fm1_led_key(HB_LED_XBTN(b), on)
+#else
+#define XLED(b, on) ((void)0)
+#endif
 
 #define LO(f) ((uint16_t)__builtin_offsetof(sc_layer_t, f))
 #define PO(f) ((uint16_t)__builtin_offsetof(sc_patch_t, f))
@@ -313,6 +324,15 @@ static const struct { uint8_t btn, first, n; } GROUP[] = {
 #define PG_LAYERS 5u
 #define PG_FENV 8u                              /* FILTER ENV, AMP ENV: ATTACK .. RELEASE (CC 73, 72) */
 #define PG_AENV 9u
+/* CC70..73 (the SMK-37's faders) by FADER BANK: PLAY (cutoff, resonance, release and attack: both envelopes'),
+ * FILTER ENV, AMP ENV, MIX; 0 for PLAY's own (below) */
+static const char *const FB_NAME[] = {"PLAY", "FILTER ENV", "AMP ENV", "MIX"};
+static const prm_t *const FB[4][4] = {
+    {0, &PAGE[0][1], 0, 0},
+    {&PAGE[PG_FENV][0], &PAGE[PG_FENV][1], &PAGE[PG_FENV][2], &PAGE[PG_FENV][3]},
+    {&PAGE[PG_AENV][0], &PAGE[PG_AENV][1], &PAGE[PG_AENV][2], &PAGE[PG_AENV][3]},
+    {&PAGE[1][3], &PAGE[2][3], &PAGE[4][0], &PAGE[7][0]}};   /* OSC 1 / 2 LEVEL, NOISE, FILTER MOD's ENV */
+static uint8_t fbank;
 #define PG_STICK 25u
 _Static_assert(N_PAGES == 26 && PG_STICK + 1u == N_PAGES, "GROUP covers every page, in order");
 
@@ -611,13 +631,19 @@ static uint32_t group_of(uint32_t page)
     return k;
 }
 
+static char toast[24];                          /* a word for a moment on the page's line (KNOB / FADER BANK) */
+static uint32_t toast_ms;
+
 static void draw_page(uint32_t page)            /* its name, and where it is in its group: "2/5" */
 {
     char s[8];
     const uint32_t g = group_of(page);
     cv_begin(240, 20, C_BLACK);
-    cv_text(120 - text_w(&FONT_S, PAGE_NAME[page]) / 2, 2, &FONT_S, PAGE_NAME[page], C_ACC);
-    if (GROUP[g].n > 1u) {
+    if (toast[0])
+        cv_text(120 - text_w(&FONT_S, toast) / 2, 2, &FONT_S, toast, C_WHITE);
+    else
+        cv_text(120 - text_w(&FONT_S, PAGE_NAME[page]) / 2, 2, &FONT_S, PAGE_NAME[page], C_ACC);
+    if (!toast[0] && GROUP[g].n > 1u) {
         fmt_int(s, (int32_t)(page - GROUP[g].first + 1u));
         str_cpy(s + str_len(s), "/", 4);
         fmt_int(s + str_len(s), (int32_t)GROUP[g].n);
@@ -893,6 +919,31 @@ static void app_loop(void)
             set.page = GROUP[k].first;
             dirty = 1; t_change = fm1_ms;
         }
+    if (b & (1u << BTN_LEFT | 1u << BTN_RIGHT)) {   /* (the SMK-37's) < >: through all the pages */
+        set.page = (uint8_t)((set.page + (b >> BTN_RIGHT & 1u ? 1u : N_PAGES - 1u)) % N_PAGES);
+        grp_held = -1;
+        dirty = 1; t_change = fm1_ms;
+    }
+    if (b & 1u << BTN_KNOB_BANK) {             /* the layers the knobs edit; a single sound has one: LAYERS */
+        if (syn.patch.voice_mode == SC_VM_SINGLE) {
+            set.page = PG_LAYERS;
+            dirty = 1; t_change = fm1_ms;
+        } else {
+            edit.layer = (int8_t)((edit.layer + 1) % 3);
+            str_cpy(toast, "EDIT ", 8);
+            str_cpy(toast + 5, L_EDIT[edit.layer], 8);
+            toast_ms = fm1_ms;
+            page_drawn = ~0u;
+        }
+    }
+    if (b & 1u << BTN_FADER_BANK) {            /* what the faders do */
+        fbank = (uint8_t)((fbank + 1u) % 4u);
+        str_cpy(toast, "FADERS ", 8);
+        str_cpy(toast + 7, FB_NAME[fbank], 12);
+        toast_ms = fm1_ms;
+        page_drawn = ~0u;
+    }
+    if (toast[0] && fm1_ms - toast_ms >= 1500u) { toast[0] = 0; page_drawn = ~0u; }
     if (grp_held >= 0) {
         const uint32_t g = (uint32_t)grp_held, n = GROUP[g].n, i = set.page - GROUP[g].first;
         int up = !(fm1_in.buttons >> GROUP[g].btn & 1u) || (rel >> GROUP[g].btn & 1u);
@@ -948,9 +999,11 @@ static void app_loop(void)
         } else if (ty == 0xB0u && d1 == 64u) {               /* the sustain pedal */
             if (d2 >= 64u) sustain = 1;
             else if (sustain) { sustain = 0; sus_release(); }
-        } else if (ty == 0xB0u && d1 >= 71u && d1 <= 74u) {  /* resonance, release, attack, cutoff (as PROPHET's) */
+        } else if (ty == 0xB0u && d1 >= 70u && d1 <= 74u) {  /* 70..73 by FADER BANK (PLAY: cutoff, resonance,
+                                                                * release, attack, as PROPHET's 71..73); 74 cutoff */
             static const prm_t CC_CUT = LIN("CUTOFF", cutoff, 0, 1, 0.01, U_NUM);   /* (0..1, as 0.2's) */
-            if (d1 == 71u) prm_cc(&PAGE[0][1], d2);           /* HOME's RESO */
+            const prm_t *p = d1 < 74u ? FB[fbank][d1 - 70u] : 0;
+            if (p) prm_cc(p, d2);
             else if (d1 == 72u) { prm_cc(&PAGE[PG_FENV][3], d2); prm_cc(&PAGE[PG_AENV][3], d2); }
             else if (d1 == 73u) { prm_cc(&PAGE[PG_FENV][0], d2); prm_cc(&PAGE[PG_AENV][0], d2); }
             else prm_cc(&CC_CUT, d2);
@@ -984,6 +1037,8 @@ static void app_loop(void)
     fm1_led_key(BTN_OCT_UP, set.oct > 0);
     for (k = 0; k < N_GROUPS; k++)
         fm1_led_key(GROUP[k].btn, group_of(set.page) == k);
+    XLED(BTN_KNOB_BANK, syn.patch.voice_mode != SC_VM_SINGLE && edit.layer != ED_BOTH);
+    XLED(BTN_FADER_BANK, fbank != 0u);
 
     /* redraw only what changed */
     cpu = cpu_pub * 100u / BLOCK_TICKS;
