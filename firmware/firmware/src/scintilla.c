@@ -678,6 +678,9 @@ static void draw_prm(uint32_t col, const prm_t *p, int32_t v)   /* HOME: one kno
     cv_blit((int32_t)col * 60, Y_PRM);
 }
 
+#ifndef KEY_BASE
+#define KEY_BASE(n) ((void)0)
+#endif
 #ifndef KNOB_FIRST
 #define KNOB_FIRST 1u                           /* the number on the panel of KNOB1: K1 (an SMK-37's K5: sc_harbor.h) */
 #endif
@@ -1033,6 +1036,7 @@ static void app_loop(void)
     else if (perf_dirty) { sc_post(&syn, SC_EV_PERF, 0, 0); perf_dirty = 0; }
 
     base = (uint32_t)(KEY0 + 12 * set.oct);
+    KEY_BASE(base);                         /* (fm1-dock on an SMK-37: its outer keys go on from this octave) */
     for (k = 0; k < 27u; k++)               /* what sounds, on the keys of this octave */
         if (sounding[base + k]) lit |= 1u << k;
     for (k = 0; k < 27u; k++)
