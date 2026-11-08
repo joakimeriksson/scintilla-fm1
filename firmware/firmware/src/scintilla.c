@@ -678,13 +678,17 @@ static void draw_prm(uint32_t col, const prm_t *p, int32_t v)   /* HOME: one kno
     cv_blit((int32_t)col * 60, Y_PRM);
 }
 
+#ifndef KNOB_FIRST
+#define KNOB_FIRST 1u                           /* the number on the panel of KNOB1: K1 (an SMK-37's K5: sc_harbor.h) */
+#endif
+
 static void draw_row(uint32_t k, const prm_t *p, int32_t v)   /* another page's: "K1 ATTACK      5ms", a bar under */
 {
     char s[16];
     int32_t x, w;
     cv_begin(240, 24, C_BLACK);
     if (p->name) {
-        s[0] = 'K'; s[1] = (char)('1' + k); s[2] = 0;
+        s[0] = 'K'; s[1] = (char)('0' + KNOB_FIRST + k); s[2] = 0;
         cv_text(8, 0, &FONT_S, s, C_GREY);
         cv_text(36, 0, &FONT_S, p->name, C_WHITE);
         prm_text(s, p, v);
