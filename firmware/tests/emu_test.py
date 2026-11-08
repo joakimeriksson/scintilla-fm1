@@ -324,14 +324,14 @@ def main():
     check("routing", peak(kept, 3.6, 4.1) > 10 * max(1, peak(cut, 3.6, 4.1)),
           f"a note held, VOICES turned on LAYERS: {peak(cut, 3.6, 4.1)} 1.6 s later, {peak(kept, 3.6, 4.1)} without")
 
-    # CC 71 / 72 / 73: resonance, both envelopes' release and attack
-    _, _ = emu.run("700:mb04740,800:mb0487f,900:mb04900", 1400, OUT / "cc", ram=True)
+    # CC 70 / 71 / 72 / 73 (FADER BANK's PLAY, as it starts): cutoff, resonance, both envelopes' release and attack
+    _, _ = emu.run("600:mb04620,700:mb04740,800:mb0487f,900:mb04900", 1400, OUT / "cc", ram=True)
     ram = (OUT / "cc" / "ram.bin").read_bytes()
-    fs = fields([L0 + "reso", L0 + "env_a.r", L0 + "env_f.r", L0 + "env_a.a", L0 + "env_f.a"])
+    fs = fields([L0 + "cutoff", L0 + "reso", L0 + "env_a.r", L0 + "env_f.r", L0 + "env_a.a", L0 + "env_f.a"])
     v = {n: struct.unpack_from("<i", ram, sym("syn") + o)[0] for n, (o, _, _) in fs.items()}
-    want = {L0 + "reso": 64 * 516, L0 + "env_a.r": 15 << 16, L0 + "env_f.r": 15 << 16, L0 + "env_a.a": 65, L0 + "env_f.a": 65}
+    want = {L0 + "cutoff": 32 * 516, L0 + "reso": 64 * 516, L0 + "env_a.r": 15 << 16, L0 + "env_f.r": 15 << 16, L0 + "env_a.a": 65, L0 + "env_f.a": 65}
     check("cc", all(abs(v[n] - want[n]) <= want[n] // 16 for n in want),
-          "CC71 64, CC72 127, CC73 0: " + ", ".join(f"{n[len(L0):]} {v[n] / 65536:.3f}" for n in want))
+          "CC70 32, CC71 64, CC72 127, CC73 0: " + ", ".join(f"{n[len(L0):]} {v[n] / 65536:.3f}" for n in want))
 
     pages_check()
 

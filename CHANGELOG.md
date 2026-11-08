@@ -9,7 +9,9 @@
 - A page button held for 0.4 s goes back a page; the screen shows where in the group you are.
 - LAYERS: edit the upper, the lower or both layers; make a sound single, split (at a note) or double; its voices.
 - The sustain pedal (MIDI CC 64, the Synthex's HOLD), from USB and the DIN jack.
-- CC 71 resonance, CC 72 release and CC 73 attack (both envelopes), as PROPHET's.
+- CC 71 resonance, CC 72 release and CC 73 attack (both envelopes), as PROPHET's; CC 70 the cutoff.
+- On fm1-dock's SMK-37: FADER BANK gives its faders (CC 70..73) PLAY, FILTER ENV, AMP ENV or MIX; KNOB BANK picks
+  the layers the knobs edit; < > step through every page.
 - The OUTPUT page's TUNE knob is gone: neither the engine nor synthex-web plays the master tune.
 - The pages are numbered anew: the page saved by 0.1 or 0.2 opens as the same page.
 - The pitch routes (LFO to OSC 1 / OSC 2, ENV1 to OSC 2) turn by ratios and show three decimals under 0.1: the
