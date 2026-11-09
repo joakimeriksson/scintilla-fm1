@@ -22,6 +22,19 @@ enum { ENV_IDLE, ENV_ATTACK, ENV_DECAY, ENV_SUSTAIN, ENV_RELEASE };
 #define MAX_DT 1932735283u                      /* 0.45 of a cycle: VoiceCore's dt clamp */
 #define PW_LO  3277                             /* 0.05, Q16 */
 #define PW_HI  62259                            /* 0.95 */
+/* VoiceCore's AC_COUPLING_HZ, 5 Hz: each oscillator reaches the mixer and the ring modulator through a
+ * one-pole coupling that takes its DC off (a pulse of width pw carries 2 pw - 1 of it, which came out as
+ * a thump on the narrow pulses). 1 - exp(-2 pi 5 / 44100), Q30 */
+#define DC_K   764639
+
+/* dc += k (s - dc); s - dc: the coupling, one oscillator sample (Q20) with its tracker (Q26: the
+ * difference fits 32 bits, so the multiply is one 32 x 32 one; Q30 and a 64-bit one cost twice the
+ * instructions) */
+static inline int32_t dc_block(int32_t s, int32_t *dc)
+{
+    *dc += (int32_t)(((int64_t)DC_K * (s * 64 - *dc)) >> 30);
+    return s - (*dc >> 6);
+}
 
 /* ---- pitch and cutoff tables ---------------------------------------------------------------- */
 
@@ -578,6 +591,10 @@ void sc_voice_note_on(sc_voice_t *v, const sc_prep_t *p, int32_t note, int32_t v
     if (from_idle) {                            /* a sounding voice keeps its phases: a reset is a step */
         if (!L->o2_sync) osc_reset(&v->o1);
         osc_reset(&v->o2);
+        /* the hardware's oscillators run all the time, so their coupling has settled when a key goes
+         * down: the tracker starts at the waveform's mean (a pulse's 2 pw - 1), not at 0 */
+        v->dc1 = L->o1_wave == SC_WAVE_SQR ? (2 * L->o1_pwm - SC_ONE16) * (1 << 10) : 0;
+        v->dc2 = L->o2_wave == SC_WAVE_SQR ? (2 * L->o2_pwm - SC_ONE16) * (1 << 10) : 0;
     }
 
     v->off1 = L->o1_glide_amt * 256;
@@ -838,6 +855,11 @@ static void render_general(sc_voice_t *v, const sc_prep_t *p, int32_t *out, uint
         int32_t nz = 0;
         if (use & SC_USE_NOISE) nz = L->noise_pink ? pink_next(&v->pink) : sc_rand20(&v->noise2);
 
+        v->prev1 = s1;                          /* cross-mod takes the oscillators as they are */
+        v->prev2 = s2;
+        s1 = dc_block(s1, &v->dc1);             /* the mixer and the ring modulator, without their DC */
+        s2 = dc_block(s2, &v->dc2);
+
         int32_t s2m = L->ring ? sc_mul(s1, s2, 20) : s2;
         int32_t mixed = (int32_t)(((int64_t)s1 * p->mix1 + (int64_t)s2m * p->mix2 + (int64_t)nz * p->mixn) >> 16);
         mixed = sc_mul(mixed, p->atten, 16);
@@ -860,9 +882,6 @@ static void render_general(sc_voice_t *v, const sc_prep_t *p, int32_t *out, uint
             amp = (int32_t)(((int64_t)amp * (SC_ONE16 + (int32_t)(((int64_t)l1 * p->ka[0] + (int64_t)l2 * p->ka[1]) >> 20))) >> 16);
         amp = sc_mul(amp, vgain, 16);
         out[i] += sc_mul(y, amp, 16);
-
-        v->prev1 = s1;
-        v->prev2 = s2;
     }
 }
 
@@ -1037,18 +1056,25 @@ static void mix_run(sc_lane_t *w, sc_voice_t *v, int mode, const mix_t *m, const
 {
     const int32_t m1 = m->m1, m2 = m->m2, mn = m->mn, att = m->at;
     int32_t *x = w->mix;
+    int32_t dc1 = v->dc1, dc2 = v->dc2;         /* the oscillators' coupling (dc_block), in the mix's loop */
     if (mn)                                     /* the noise joins the same sum before its shift */
         for (uint32_t i = 0; i < n; i++) {
-            int64_t acc = (int64_t)w->s1[i] * m1 + (int64_t)(m->ring ? sc_mul(w->s1[i], w->s2[i], 20) : w->s2[i]) * m2
-                        + (int64_t)w->nz[i] * mn;
+            int32_t s1 = dc_block(w->s1[i], &dc1), s2 = dc_block(w->s2[i], &dc2);
+            int64_t acc = (int64_t)s1 * m1 + (int64_t)(m->ring ? sc_mul(s1, s2, 20) : s2) * m2 + (int64_t)w->nz[i] * mn;
             x[i] = sc_mul((int32_t)(acc >> 16), att, 16);
         }
     else if (m->ring)
-        for (uint32_t i = 0; i < n; i++)
-            x[i] = sc_mul((int32_t)(((int64_t)w->s1[i] * m1 + (int64_t)sc_mul(w->s1[i], w->s2[i], 20) * m2) >> 16), att, 16);
+        for (uint32_t i = 0; i < n; i++) {
+            int32_t s1 = dc_block(w->s1[i], &dc1), s2 = dc_block(w->s2[i], &dc2);
+            x[i] = sc_mul((int32_t)(((int64_t)s1 * m1 + (int64_t)sc_mul(s1, s2, 20) * m2) >> 16), att, 16);
+        }
     else
-        for (uint32_t i = 0; i < n; i++)
-            x[i] = sc_mul((int32_t)(((int64_t)w->s1[i] * m1 + (int64_t)w->s2[i] * m2) >> 16), att, 16);
+        for (uint32_t i = 0; i < n; i++) {
+            int32_t s1 = dc_block(w->s1[i], &dc1), s2 = dc_block(w->s2[i], &dc2);
+            x[i] = sc_mul((int32_t)(((int64_t)s1 * m1 + (int64_t)s2 * m2) >> 16), att, 16);
+        }
+    v->dc1 = dc1;
+    v->dc2 = dc2;
 
     switch (mode) {
     case SC_FLT_LP24:
