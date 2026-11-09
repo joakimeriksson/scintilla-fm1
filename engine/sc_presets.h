@@ -85,6 +85,7 @@ static void sc_rom_load(unsigned index, sc_patch_t *p)
     L->key_track = sc_rom_q(sc_rom_round(1000 * (int32_t)v[6], 255), 1000);
     L->reso = sc_rom_q(sc_rom_round(v[10] * 1000, 254), 1000);
     int32_t env = (v[20] >> 4) <= 3 && (v[22] >> 4) > 6 ? SC_ROM_ENV_LONG_MILLI[v[7]] : SC_ROM_ENV_MILLI[v[7]];
+    if (index == 18) env = sc_rom_round(env * 7, 10);           /* calibrated Filtered chorus: x 0.7 */
     L->env_amt = sc_rom_q((v[35] & 64u) ? -env : env, 1000);
     L->env_f.a = sc_rom_q(SC_ROM_ATTACK_MS[v[20] >> 4], 1000);
     L->env_f.d = sc_rom_q(index == 32 ? 3300 : SC_ROM_ENV_MS[v[22] >> 4], 1000); /* calibrated Take-off */

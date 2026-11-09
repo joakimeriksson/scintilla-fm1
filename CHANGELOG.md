@@ -11,6 +11,8 @@
 - The ROM bank, as synthex-web's retune: full key tracking is 1.0 semitone per key (it was 0.81), and the filter
   envelope's sustain 0.7 of its knob. Measured on held notes at the start of each preset's passage in the
   run-through; the organs, Pianet, Ceilos, Double basses and Brass II gain most, Electric piano II loses.
+- Filtered chorus's filter envelope at 0.7 of its decoded amount: its notes open 12-15 semitones less, as on the
+  run-through.
 
 **The firmware**
 

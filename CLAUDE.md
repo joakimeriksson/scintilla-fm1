@@ -15,8 +15,8 @@ the host build's. A mismatch is a bug (in the engine, the compiler or the emulat
 
 ## Verified
 
-- 2026-11-09, the ROM bank's key tracking (1.0 st per key) and filter sustain (0.7), synthex-web 1da4205, in
-  `sc_rom_load`: 80 exact expansions against gen_factory.py's bank (`tests/presets_test.py`, PATCH_SHA256 renewed);
+- 2026-11-10, the ROM bank's key tracking (1.0 st per key), filter sustain (0.7) and Filtered chorus's envelope
+  (x 0.7), synthex-web 452883a, in `sc_rom_load`: 80 exact expansions against gen_factory.py's bank (`tests/presets_test.py`, PATCH_SHA256 renewed);
   `tests/run.sh` 320 pairs inside the limits; FM-1 = host on the eleven configs and the 80 patches.
 - 2026-11-09, the oscillators' 5 Hz coupling (VoiceCore's `AC_COUPLING_HZ`, ai-smarthome 2b0f5c3, `dc_block`):
   `tests/run.sh` 320 pairs inside the limits (level max 0.08 dB, spectrum median 0.013 dB); staged = per-sample
