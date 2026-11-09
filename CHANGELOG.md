@@ -8,6 +8,9 @@
   pulse's DC (2 pw - 1 of it) no longer thumps under every note (Brass II, Funky Clav., Electric piano I, the
   clavichords, Metallic piano, Pianet, Sweep 1). It costs ~18 instructions a voice-sample: Chunky Synth x8 19 -> 22 %
   of a core, Ring mod. x8 51 -> 54 %.
+- The ROM bank, as synthex-web's retune: full key tracking is 1.0 semitone per key (it was 0.81), and the filter
+  envelope's sustain 0.7 of its knob. Measured on held notes at the start of each preset's passage in the
+  run-through; the organs, Pianet, Ceilos, Double basses and Brass II gain most, Electric piano II loses.
 
 **The firmware**
 

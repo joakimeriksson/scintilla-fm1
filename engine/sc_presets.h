@@ -79,15 +79,16 @@ static void sc_rom_load(unsigned index, sc_patch_t *p)
     L->ring = (int8_t)((v[37] & 192u) != 0);
     L->cross = v[30] == 4 ? 11469 : 0; L->cross2 = v[29] == 4 ? 11469 : 0;
     L->flt_mode = (int8_t)filter[v[32]];
+    /* gen_factory.py's KEY_W = 1 / (2 CUT_SLOPE): full key tracking 1.0 st per key (synthex-web 1da4205) */
     L->cutoff = sc_rom_q(sc_rom_round((-25000 + 580 * (255 - (int32_t)v[5])) * 12750 +
-                                     971616 * (int32_t)v[6], 1224000), 1000);
-    L->key_track = sc_rom_q(sc_rom_round(80968 * (int32_t)v[6], 25500), 1000);
+                                     1200000 * (int32_t)v[6], 1224000), 1000);
+    L->key_track = sc_rom_q(sc_rom_round(1000 * (int32_t)v[6], 255), 1000);
     L->reso = sc_rom_q(sc_rom_round(v[10] * 1000, 254), 1000);
     int32_t env = (v[20] >> 4) <= 3 && (v[22] >> 4) > 6 ? SC_ROM_ENV_LONG_MILLI[v[7]] : SC_ROM_ENV_MILLI[v[7]];
     L->env_amt = sc_rom_q((v[35] & 64u) ? -env : env, 1000);
     L->env_f.a = sc_rom_q(SC_ROM_ATTACK_MS[v[20] >> 4], 1000);
     L->env_f.d = sc_rom_q(index == 32 ? 3300 : SC_ROM_ENV_MS[v[22] >> 4], 1000); /* calibrated Take-off */
-    L->env_f.s = sc_rom_q(sc_rom_round(v[8] * 1000, 255), 1000);
+    L->env_f.s = sc_rom_q(sc_rom_round(v[8] * 700, 255), 1000);         /* FILTER_SUSTAIN 0.7 */
     L->env_f.r = sc_rom_q((v[38] & 128u) ? SC_ROM_ENV_MS[v[24] >> 4] : 10, 1000);
     L->env_a.a = sc_rom_q(SC_ROM_ATTACK_MS[v[21] >> 4], 1000);
     L->env_a.d = sc_rom_q(SC_ROM_ENV_MS[v[23] >> 4], 1000);

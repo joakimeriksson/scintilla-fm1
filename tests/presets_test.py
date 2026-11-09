@@ -18,7 +18,8 @@ from host_cc import host_cc
 
 # Captured from the pre-compression bank; includes every field and padding byte.
 # Update only for intentional sound/name changes, after the reference check.
-PATCH_SHA256 = 'a70ad50882259e08b2120eab52cd352771604a92f9bdd39559c533f38c530401'
+# 2026-11-09: synthex-web 1da4205's key tracking (1.0 st per key) and filter sustain (0.7 of its knob)
+PATCH_SHA256 = '0fe63d5706c534377f13974df05d4a02581e30b4c6e495e4dd16ac2f04b725fa'
 ROM_SHA256 = 'a3b49f9ace62011cc5b2b1b0a18e5aa18ff74a392450944ef5cc56fd3f291593'
 
 
