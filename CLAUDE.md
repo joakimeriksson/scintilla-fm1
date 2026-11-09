@@ -15,6 +15,13 @@ the host build's. A mismatch is a bug (in the engine, the compiler or the emulat
 
 ## Verified
 
+- 2026-11-09, the oscillators' 5 Hz coupling (VoiceCore's `AC_COUPLING_HZ`, ai-smarthome 2b0f5c3, `dc_block`):
+  `tests/run.sh` 320 pairs inside the limits (level max 0.08 dB, spectrum median 0.013 dB); staged = per-sample
+  on every preset; `tests/split.c`; FM-1 = host on all eleven bench configs and the 80 patches. The engine before it
+  misses the new VoiceCore by +3.6 dB of error on Brass II's note (DC -0.29). Cost, per voice-sample: +18
+  instructions (Chunky Synth x8 19.3 -> 22.0 %, Ring mod. 50.9 -> 53.6 %, Metallic 56.8 -> 58.5 %). The tracker is
+  Q26 so its multiply is one 32 x 32 one: in Q30 with a 64-bit difference it cost +32.
+
 - 2026-11-01, the CPU work for fm1-dock (the two-word division, the galloping cutoff search, the mix once a
   block, the envelope-only cutoff, the per-sample cutoff's skip, the lanes and the split render): every change the
   same samples. `tests/run.sh` 320 pairs inside the limits with the scores unchanged; staged = per-sample on every
