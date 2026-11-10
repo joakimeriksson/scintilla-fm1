@@ -15,6 +15,12 @@ the host build's. A mismatch is a bug (in the engine, the compiler or the emulat
 
 ## Verified
 
+- 2026-11-10, three ROM presets corrected one by one against the recording, as gen_factory.py's `FILTER_ENV_FIX`
+  (synthex-web 47cc14e; `fix_st`, `fix_env` in `sc_rom_load`): High pass sweep (envelope x 0.5, cutoff -8 st),
+  Filtered brass (x 0.7, +6 st), Clavichord I (x 0.7, -12 st). A corrected amount is computed from the unrounded
+  one (725 v / 60 milli), not from the table: the table's rounded value times 0.5 lands on the other side of a tie.
+  80 exact expansions against the regenerated bank (PATCH_SHA256 renewed); `tests/run.sh` 320 pairs inside the
+  limits; FM-1 = host on the eleven configs and the 80 patches. `tests/run.sh` needs a python3 with numpy.
 - 2026-11-10, the ROM bank's key tracking (1.0 st per key), filter sustain (0.7) and Filtered chorus's envelope
   (x 0.7), synthex-web 452883a, in `sc_rom_load`: 80 exact expansions against gen_factory.py's bank (`tests/presets_test.py`, PATCH_SHA256 renewed);
   `tests/run.sh` 320 pairs inside the limits; FM-1 = host on the eleven configs and the 80 patches.

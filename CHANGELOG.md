@@ -4,6 +4,9 @@
 
 **The sound**
 
+- Three ROM presets corrected against the recording of the instrument, as synthex-web's bank: High pass sweep
+  (filter envelope at half its decoded amount, cutoff 8 semitones lower), Filtered brass (envelope x 0.7, cutoff 6
+  semitones higher) and Clavichord I (envelope x 0.7, cutoff an octave lower).
 - The oscillators reach the mixer and the ring modulator through a 5 Hz coupling, as synthex-web's now do: a narrow
   pulse's DC (2 pw - 1 of it) no longer thumps under every note (Brass II, Funky Clav., Electric piano I, the
   clavichords, Metallic piano, Pianet, Sweep 1). It costs ~18 instructions a voice-sample: Chunky Synth x8 19 -> 22 %
