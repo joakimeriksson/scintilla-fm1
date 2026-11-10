@@ -104,16 +104,17 @@ static void sc_rom_load(unsigned index, sc_patch_t *p)
     L->lfo[0].shape = (int8_t)lfo[v[31]];
     L->lfo[0].rate = sc_rom_q(SC_ROM_RATE_CHZ[v[3]], 100);
     L->lfo[0].delay = sc_rom_q(SC_ROM_DELAY_CS[v[4]], 100);
-    L->lfo[0].depth_a = sc_rom_q(sc_rom_round(v[1] * 1000, 255), 1000);
-    L->lfo[0].depth_b = sc_rom_q(sc_rom_round(v[2] * 1000, 255), 1000);
+    /* both depth knobs read inverted (byte 255 = none): the LFO board's level CVs bias its OTAs through
+     * (5 V - LEV) / 10K. gen_factory.py's PITCH_MOD 0.09, PWM_MOD 2, CUTOFF_MOD 2, AMP_MOD 1 */
+    L->lfo[0].depth_a = sc_rom_q(sc_rom_round((255 - (int32_t)v[1]) * 1000, 255), 1000);
+    L->lfo[0].depth_b = sc_rom_q(sc_rom_round((255 - (int32_t)v[2]) * 1000, 255), 1000);
     L->lfo[1].rate = 26214; L->lfo[1].depth_a = L->lfo[1].depth_b = 65536;
-    int32_t pitch = sc_rom_q(SC_ROM_PITCH_1E4[v[1]], 10000);
-    if (v[26] & 1u) L->mm[SC_MM_L1_P1] = pitch;
-    if (v[26] & 2u) L->mm[SC_MM_L1_P2] = pitch;
-    if (v[26] & 4u) L->mm[SC_MM_L1_PW1] = 32768;
-    if (v[26] & 32u) L->mm[SC_MM_L1_PW2] = 32768;
-    if (v[26] & 16u) L->mm[SC_MM_L1_CUT] = 32768;
-    if (v[26] & 8u) L->mm[SC_MM_L1_AMP] = 24248;
+    if (v[26] & 1u) L->mm[SC_MM_L1_P1] = sc_rom_q(90, 1000);
+    if (v[26] & 2u) L->mm[SC_MM_L1_P2] = sc_rom_q(90, 1000);
+    if (v[26] & 4u) L->mm[SC_MM_L1_PW1] = 131072;
+    if (v[26] & 32u) L->mm[SC_MM_L1_PW2] = 131072;
+    if (v[26] & 16u) L->mm[SC_MM_L1_CUT] = 131072;
+    if (v[26] & 8u) L->mm[SC_MM_L1_AMP] = 65536;
     L->glide_o1 = L->glide_o2 = L->multi_trigger = 1;
     L->glide_mode = v[34] & 128u ? SC_GLIDE_PORTA : v[34] & 64u ? SC_GLIDE_GLIDE : SC_GLIDE_OFF;
     if (L->glide_mode) {

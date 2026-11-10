@@ -325,6 +325,32 @@ static inline int32_t lfo_step(sc_lfo_t *l, uint32_t inc, int shape, uint32_t dl
     return l->smooth;
 }
 
+/* Lfo.sync: the LFO board's SYNC strobe. The delay ramp starts again and the oscillator restarts: a
+ * triangle at its middle (phase 3/4), the other shapes at the top of the board's ramp (phase 0) */
+static void lfo_sync(sc_lfo_t *l, int shape)
+{
+    l->ph = shape == SC_LFO_TRI ? 0xC0000000u : 0;
+    l->ramp = 0;
+    l->smooth = lfo_raw(l, shape);
+}
+
+/* Lfo.advance: n samples pass without output: the phase and the delay ramp of n steps, the smoothed
+ * value the shape where the last of them read it (a silent voice's copy of the layer's LFO) */
+static void lfo_advance(sc_lfo_t *l, uint32_t inc, int shape, uint32_t dly_inc, uint32_t n)
+{
+    if (!n) return;
+    uint64_t end = (uint64_t)l->ph + (uint64_t)inc * n;
+    uint32_t wraps = (uint32_t)(end >> 32);
+    for (uint32_t k = wraps > 2 ? 2 : wraps; k > 0; k--) { l->sh = l->sh_next; l->sh_next = sc_rand20(&l->rng); }
+    l->ph = (uint32_t)end - inc;
+    l->smooth = lfo_raw(l, shape);
+    l->ph = (uint32_t)end;
+    if (dly_inc && l->ramp < SC_ONE30) {
+        uint64_t r = (uint64_t)(uint32_t)l->ramp + (uint64_t)dly_inc * n;
+        l->ramp = r >= (uint64_t)SC_ONE30 ? SC_ONE30 : (int32_t)r;
+    }
+}
+
 static void lfo_trigger(sc_lfo_t *l)
 {
     l->ph = 0;
@@ -605,6 +631,21 @@ void sc_voice_note_on(sc_voice_t *v, const sc_prep_t *p, int32_t note, int32_t v
         if (L->glide_o1) { v->off1 += L->glide_amt * 256; v->c1 = p->gdc_panel; }
         if (L->glide_o2) { v->off2 += L->glide_amt * 256; v->c2 = p->gdc_panel; }
     }
+}
+
+/* VoiceCore.syncLfo: the layer's LFO strobed (sc_synth.c's layer_on has the rule) */
+void sc_voice_lfo_sync(sc_voice_t *v, const sc_prep_t *p)
+{
+    lfo_sync(&v->lfo1, p->L->lfo[0].shape);
+}
+
+/* n samples of a silent voice: its copies of the layer's LFOs keep running */
+void sc_voice_advance(sc_voice_t *v, const sc_prep_t *p, uint32_t n)
+{
+    const sc_layer_t *L = p->L;
+    v->stepped = 1;
+    lfo_advance(&v->lfo1, p->lfo_inc[0], L->lfo[0].shape, p->lfo_dly_inc[0], n);
+    lfo_advance(&v->lfo2, p->lfo_inc[1], L->lfo[1].shape, p->lfo_dly_inc[1], n);
 }
 
 void sc_voice_note_off(sc_voice_t *v, const sc_prep_t *p)
@@ -1120,7 +1161,8 @@ void sc_voice_render(sc_voice_t *v, const sc_prep_t *p, int32_t *out, uint32_t n
 
 void sc_voice_render_lane(sc_voice_t *v, const sc_prep_t *p, int32_t *out, uint32_t n, unsigned lane)
 {
-    if (v->env2.stage == ENV_IDLE && !v->amp_gate) return;
+    if (v->env2.stage == ENV_IDLE && !v->amp_gate) { sc_voice_advance(v, p, n); return; }
+    v->stepped = 1;
 #ifndef SC_TEST_GENERAL                         /* tests/run.sh: the general path for every patch */
     if (p->cross2 || n > 256)
 #endif

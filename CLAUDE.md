@@ -15,6 +15,13 @@ the host build's. A mismatch is a bug (in the engine, the compiler or the emulat
 
 ## Verified
 
+- 2026-11-10, the layer's LFO and the inverted depth knobs (synthex-web cf1fef1: `Lfo.sync` / `Lfo.advance`,
+  `VoiceCore.syncLfo`, gen_factory.py's `PITCH_MOD` 0.09, `PWM_MOD` 2, `CUTOFF_MOD` 2, `AMP_MOD` 1 on depths of
+  (255 - byte) / 255). 80 exact expansions
+  (PATCH_SHA256 renewed, `SC_ROM_PITCH_1E4` gone); `tests/run.sh` 320 pairs inside the limits, level median 0.000
+  max 0.05 dB, spectrum median 0.014 max 2.11 dB, staged = per-sample on every preset; `tests/split.c` also checks
+  that no voice's LFO leaves the layer's phase (16000 blocks, two threads); FM-1 = host on the eleven configs and
+  the 80 patches. The firmware was not rebuilt or run in fm1-live.
 - 2026-11-10, three ROM presets corrected one by one against the recording, as gen_factory.py's `FILTER_ENV_FIX`
   (synthex-web 47cc14e; `fix_st`, `fix_env` in `sc_rom_load`): High pass sweep (envelope x 0.5, cutoff -8 st),
   Filtered brass (x 0.7, +6 st), Clavichord I (x 0.7, -12 st). A corrected amount is computed from the unrounded
@@ -62,8 +69,13 @@ the host build's. A mismatch is a bug (in the engine, the compiler or the emulat
 
 ## Ported faithfully, though they look like bugs (fix them in synthex-web first, then here)
 
-- The LFO delay ramp restarts only when the LFO is key-synced; with sync off (every factory patch) it plays once,
-  from when the voice was created.
+- Since 2026-11-10 the LFO is the layer's, as on the hardware, though every voice still carries a copy: a silent
+  voice's copy keeps running (`sc_voice_advance`: the voice's render does it for a silent voice; the synth, which
+  does not render one, in `sc_render_end` for the voices whose `stepped` is clear), so the copies stay in phase as
+  long as every voice passes every block. `sc_voice_lfo_sync` restarts LFO 1 and its delay ramp on every voice of
+  the layer: `layer_on` calls it for a key that finds no other held, on a patch with an LFO delay (the firmware's
+  rule for the LFO board's SYNC strobe). `host/sc_render.c`'s one-voice renders and `tools/ref_render.mjs` strobe
+  the same way. A patch with `lfo.sync` (none in the factory bank) still restarts its own copy at every note.
 - Every voice seeds its noise the same (`0xdeadbeef`, pink `0xfeedface`): the noise of a chord is correlated.
 - A silent voice stops its 128-sample coefficient clock at the start of a run, not mid-run, so the length of the
   runs it is given is part of what it plays (the next note's first filter update moves). The app gives it 128

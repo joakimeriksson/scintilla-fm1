@@ -33,11 +33,17 @@ function render(patch) {
   if (sc.joy) core.setJoy(sc.joy.x, sc.joy.y)
   if (nudge) core.setPitchBend(nudge)
   const ev = [...sc.events].sort((a, b) => a.t - b.t)
-  let e = 0, i = 0
+  let e = 0, i = 0, held = 0
   while (i < n) {
     while (e < ev.length && ev[e].t <= i / sr) {
-      if (ev[e].kind === 'on') core.noteOn(ev[e].note, ev[e].velocity ?? 1)
-      else core.noteOff()
+      if (ev[e].kind === 'on') {
+        // the layer's LFO strobe, as synth.ts's layerNoteOn: a key that finds no other held, a patch with a delay
+        if (held++ === 0 && patch.lfo1.delay > 0) core.syncLfo()
+        core.noteOn(ev[e].note, ev[e].velocity ?? 1)
+      } else {
+        held = Math.max(0, held - 1)
+        core.noteOff()
+      }
       e++
     }
     const next = e < ev.length ? Math.min(n, Math.max(i + 1, Math.ceil(ev[e].t * sr))) : n
