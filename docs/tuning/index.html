@@ -1,0 +1,622 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scintilla: forty presets, measured</title>
+<meta name="description" content="How close Scintilla's forty Elka Synthex presets come to a real 1981 Synthex: every preset scored against Per Kristian Risvik's recording, with spectrograms, the November tuning and what is still off.">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Scintilla: forty Synthex presets, measured against the real one">
+<meta property="og:description" content="Every factory preset on the FM-1, scored against a recording of a 1981 Elka Synthex, with spectrograms side by side.">
+<meta property="og:url" content="https://joakimeriksson.github.io/scintilla-fm1/tuning/">
+<meta property="og:image" content="https://joakimeriksson.github.io/scintilla-fm1/tuning/poster.jpg">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="720">
+<meta property="og:image:alt" content="Scintilla on the FM-1 playing preset 46, Ring mod.: spectrum difference to the real Synthex 2.6 dB">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="../screen.png" type="image/png">
+<style>
+  :root {
+    --bg: #0b0a0c; --bg2: #141217; --bg3: #1c1920; --line: #2c2830; --grid: #26222a;
+    --ink: #efe9e2; --ink2: #d4ccc4; --dim: #a39a94;
+    --amber: #f0973a; --laser: #5be37a; --led: #ff4a2e; --led-bg: #1d0d0a;
+    --hw: #3f8fef; --sc: #d47020; --before: #6f6872;
+    --sans: "Avenir Next", Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.6 var(--sans); }
+  a { color: var(--amber); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  main { max-width: 1060px; margin: 0 auto; padding: 0 16px 48px; }
+  header { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 18px 0; }
+  header .name { font-weight: 600; letter-spacing: .32em; text-transform: uppercase; color: var(--ink); }
+  header nav { display: flex; gap: 18px; font-size: 15px; }
+  code { font: 14px var(--mono); color: #e8d9c8; }
+
+  .kicker { margin: 0; color: var(--laser); font: 13px var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+  h1 { margin: 10px 0 16px; font-size: clamp(34px, 5.6vw, 58px); line-height: 1.04; letter-spacing: -.02em; max-width: 18ch; }
+  h1 em { font-style: normal; color: var(--amber); }
+  .lede { margin: 0; color: #ddd5cd; max-width: 64ch; font-size: 18px; }
+  .hero { padding: clamp(16px, 4vw, 36px) 0 8px; }
+
+  /* the tour: the whole video's sound as one spectrogram, click to listen */
+  .tour { margin: 28px 0 0; }
+  .tour-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; background: #0b0a0c; }
+  .tour-inner { position: relative; min-width: 1000px; cursor: pointer; user-select: none; }
+  .tour-inner img { display: block; width: 100%; height: 200px; object-fit: fill; }
+  .tour-nums { position: relative; height: 26px; border-bottom: 1px solid var(--line); }
+  .tour-nums span { position: absolute; top: 4px; transform: translateX(-2px); font: 600 12px var(--mono); color: var(--dim); }
+  .tour-nums span.on { color: var(--led); }
+  .tour-head { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--ink); opacity: 0; pointer-events: none;
+    box-shadow: 0 0 10px rgba(255, 255, 255, .5); }
+  .tour-tip { position: absolute; top: 34px; padding: 4px 8px; border-radius: 6px; background: rgba(20, 18, 23, .92);
+    border: 1px solid var(--line); font-size: 13px; white-space: nowrap; pointer-events: none; display: none; }
+  .tour-cap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 16px; margin: 10px 0 0; font-size: 14px; color: var(--dim); }
+  .tour-cap button { font: 600 14px var(--sans); color: var(--amber); background: none; border: 0; padding: 0; cursor: pointer; }
+
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin: 32px 0 0; }
+  .stat { background: var(--bg2); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; }
+  .stat b { display: block; font-size: 34px; line-height: 1.1; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+  .stat span { display: block; margin-top: 6px; font-size: 14.5px; color: var(--dim); line-height: 1.45; }
+
+  section.more { border-top: 1px solid var(--line); margin-top: clamp(32px, 5vw, 52px); padding-top: clamp(28px, 5vw, 44px); }
+  h2 { margin: 0 0 14px; font-size: clamp(24px, 3.2vw, 32px); letter-spacing: -.01em; }
+  h3 { margin: 0; font-size: 18px; }
+  .prose { max-width: 70ch; }
+  .prose p { margin: 0 0 1em; color: var(--ink2); }
+  .prose p b { color: var(--ink); }
+
+  .video { position: relative; display: block; margin: 0; aspect-ratio: 16 / 9; border-radius: 14px; overflow: hidden;
+    border: 1px solid var(--line); background: #000; cursor: pointer; padding: 0; width: 100%; }
+  .video img, .video iframe { display: block; width: 100%; height: 100%; border: 0; object-fit: cover; }
+  .video .play { position: absolute; inset: 0; margin: auto; width: 84px; height: 84px; border-radius: 50%;
+    background: rgba(11, 10, 12, .75); border: 2px solid var(--amber); }
+  .video .play::after { content: ""; position: absolute; left: 33px; top: 25px; border-left: 26px solid var(--amber);
+    border-top: 17px solid transparent; border-bottom: 17px solid transparent; }
+
+  /* a preset: the display, the name, the score, the two spectrograms, the two spectra */
+  .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 18px; font-size: 14px; color: var(--dim); }
+  .controls button { height: 34px; padding: 0 14px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg2);
+    color: var(--ink2); font: 500 14px var(--sans); cursor: pointer; }
+  .controls button[aria-pressed="true"] { border-color: var(--amber); color: var(--ink); background: #2a1a0d; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 480px), 1fr)); gap: 16px; }
+  .preset { background: var(--bg2); border: 1px solid var(--line); border-radius: 14px; padding: 14px; min-width: 0; }
+  .preset.focus { border-color: var(--amber); }
+  .p-head { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; }
+  .led { background: var(--led-bg); color: var(--led); font: 600 28px/1 var(--mono); padding: 8px 10px 7px; border-radius: 6px;
+    font-variant-numeric: tabular-nums; text-shadow: 0 0 10px rgba(255, 74, 46, .55); }
+  .p-head small { display: block; font: 12px var(--mono); letter-spacing: .06em; color: var(--dim); text-transform: uppercase; }
+  .p-score { text-align: right; }
+  .p-score b { font-size: 26px; font-variant-numeric: tabular-nums; }
+  .p-score small { display: block; font-size: 12px; color: var(--dim); }
+  .spec { position: relative; margin: 12px 0 0; border-radius: 8px; overflow: hidden; background: #0b0a0c; }
+  .spec img { display: block; width: 100%; height: auto; aspect-ratio: 1200 / 528; }
+  .spec .tag { position: absolute; left: 8px; padding: 1px 6px; border-radius: 4px; background: rgba(11, 10, 12, .7);
+    font: 600 11px var(--mono); letter-spacing: .08em; }
+  .spec .tag i { display: inline-block; width: 10px; height: 3px; margin: 0 6px 3px 0; border-radius: 2px; vertical-align: middle; }
+  .spec .hz { position: absolute; right: 6px; font: 10px var(--mono); color: rgba(239, 233, 226, .7); transform: translateY(-50%); }
+  .p-chart { margin: 10px 0 0; position: relative; }
+  .p-chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .p-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin: 10px 0 0; font-size: 14px; color: var(--dim); }
+  .p-foot button { height: 32px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--sc); background: #24160b;
+    color: var(--ink); font: 600 13.5px var(--sans); cursor: pointer; }
+  .p-foot button.playing { background: var(--sc); color: #1d0f03; }
+  .p-rounds { font-size: 13px; color: var(--dim); margin: 6px 0 0; }
+  .tip { position: absolute; z-index: 5; pointer-events: none; padding: 6px 9px; border-radius: 7px; background: rgba(20, 18, 23, .96);
+    border: 1px solid var(--line); font-size: 12.5px; line-height: 1.45; white-space: nowrap; display: none; color: var(--ink); }
+  .tip i { display: inline-block; width: 10px; height: 3px; border-radius: 2px; margin: 0 6px 3px 0; vertical-align: middle; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 14px; color: var(--ink2); margin: 0 0 12px; }
+  .legend i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; margin: 0 7px 4px 0; vertical-align: middle; }
+  .legend i.dot { width: 10px; height: 10px; border-radius: 50%; margin-bottom: 1px; }
+
+  .pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr)); gap: 16px; margin: 18px 0 8px; }
+
+  .fixes { display: grid; gap: 16px; margin: 18px 0 28px; }
+  .fix { background: var(--bg2); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; }
+  .fix h3 { color: var(--amber); }
+  .fix h3 span { color: var(--dim); font-weight: 400; font-size: 14px; margin-left: 8px; }
+  .fix p { margin: 8px 0 0; color: var(--ink2); font-size: 15.5px; max-width: 76ch; }
+  .fix .moved { font-size: 14.5px; color: var(--dim); }
+  .fix .moved b { color: var(--ink); font-weight: 600; }
+  .chart-box { background: var(--bg2); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; position: relative; }
+  .chart-box svg { display: block; width: 100%; height: auto; }
+
+  .worst { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 16px; margin: 18px 0; }
+  .worst > div { background: var(--bg2); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
+  .worst h3 { font-size: 16px; }
+  .worst h3 a { color: var(--ink); }
+  .worst h3 b { color: var(--amber); float: right; font-variant-numeric: tabular-nums; }
+  .worst p { margin: 6px 0 0; font-size: 14.5px; color: var(--ink2); }
+  aside.note { border-left: 3px solid var(--amber); padding: 2px 0 2px 16px; margin: 18px 0; color: var(--ink2); font-size: 15.5px; max-width: 72ch; }
+
+  ol.steps { padding-left: 22px; margin: 0 0 1em; color: var(--ink2); max-width: 72ch; }
+  ol.steps li { margin-bottom: 8px; }
+  details { margin: 18px 0 0; }
+  summary { cursor: pointer; color: var(--amber); font-size: 15px; }
+  .tbl { overflow-x: auto; margin-top: 12px; }
+  table { border-collapse: collapse; font-size: 14px; min-width: 640px; width: 100%; }
+  th, td { padding: 6px 12px 6px 0; border-bottom: 1px solid var(--line); text-align: left; }
+  th { font: 600 12px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--dim); }
+  td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
+  footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--line); font-size: 14px; color: var(--dim); }
+  footer p { margin: 0 0 8px; max-width: 90ch; }
+  @media (max-width: 760px) { header nav { gap: 12px; } .p-score b { font-size: 22px; } .led { font-size: 22px; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <a class="name" href="../">Scintilla</a>
+    <nav><a href="../">Install</a><a href="https://github.com/joakimeriksson/scintilla-fm1">Source</a>
+      <a href="https://github.com/joakimeriksson/scintilla-fm1/releases/latest">Releases</a></nav>
+  </header>
+
+  <section class="hero">
+    <p class="kicker">Tuning · November 2026</p>
+    <h1>Forty presets, <em>measured</em> against a real Synthex.</h1>
+    <p class="lede">Scintilla plays the Elka Synthex's forty factory presets on an M-VAVE FM-1. Each one was tuned
+      towards Per Kristian Risvik's recording of a real 1981 Synthex: the notes he plays were found in the recording,
+      the FM-1 played them on the same preset, and the two spectra were compared. Here are all forty: how close each
+      comes, what the latest round of tuning changed, and what is still off.</p>
+
+    <div class="tour">
+      <div class="tour-scroll">
+        <div class="tour-inner" id="tour" role="button" tabindex="0" aria-label="The whole tour as a spectrogram: click to listen from there">
+          <div class="tour-nums" id="tour-nums"></div>
+          <img src="tour.webp" width="3200" height="360" alt="Spectrogram of all forty presets as Scintilla plays them in the video, 3 minutes 12 seconds">
+          <div class="tour-head" id="tour-head"></div>
+          <div class="tour-tip" id="tour-tip"></div>
+        </div>
+      </div>
+      <p class="tour-cap"><span>The whole tour as Scintilla plays it in the video, 40 Hz to 11 kHz, 3 min 12 s: click
+        anywhere to listen from there.</span><button id="tour-stop" hidden>Stop</button></p>
+    </div>
+
+    <div class="stats" id="stats"></div>
+  </section>
+
+  <section class="more" id="video" hidden>
+    <h2>The video</h2>
+    <button class="video" id="video-btn" aria-label="Play the video on YouTube">
+      <img src="poster.jpg" width="1280" height="720" alt="Scintilla on the FM-1 playing Ring mod.: 2.6 dB from the real Synthex" loading="lazy">
+      <span class="play"></span>
+    </button>
+  </section>
+
+  <section class="more" id="close">
+    <h2>How close is close</h2>
+    <div class="prose">
+      <p>The number under each preset compares two spectra: the recording's stretch, and Scintilla playing the same
+        notes. Both are cut into third-octave bands from 30 Hz to 11 kHz and set to the same average level, so the
+        number measures the sound, not the loudness. It is the rms of the band-by-band difference, in dB, over the bands
+        within 50 dB of the loudest. Identical spectra would score 0.</p>
+      <p>Under 3 dB the two curves lie on top of each other. Past 10 dB a whole region of the spectrum is somewhere
+        else. These two are the closest and the furthest of the forty.</p>
+    </div>
+    <div class="legend"><span><i style="background:var(--hw)"></i>Synthex, 1981 (Per Kristian Risvik's recording)</span>
+      <span><i style="background:var(--sc)"></i>Scintilla on the FM-1, the same notes</span></div>
+    <div class="pair" id="pair"></div>
+  </section>
+
+  <section class="more" id="all">
+    <h2>All forty</h2>
+    <div class="prose"><p>The four banks of the Synthex's ROM, in its own numbering. Each spectrogram shows the recording
+      above Scintilla, the same stretch and the same notes, each on its own loudest point. Play it, then follow the link
+      to the same moment in the recording on Per Kristian's site.</p></div>
+    <div class="controls" role="group" aria-label="Sort the presets">Sort:
+      <button data-sort="slot" aria-pressed="true">By program</button>
+      <button data-sort="best" aria-pressed="false">Closest first</button>
+      <button data-sort="worst" aria-pressed="false">Furthest first</button>
+    </div>
+    <div class="grid" id="grid"></div>
+    <details>
+      <summary>The numbers as a table</summary>
+      <div class="tbl"><table id="table"><thead><tr><th>#</th><th>Preset</th><th class="n">Original</th><th class="n">AC coupling</th>
+        <th class="n">Tracking, sustain</th><th class="n">Filtered chorus</th><th class="n">In the video</th><th class="n">Notes</th></tr></thead><tbody></tbody></table></div>
+    </details>
+  </section>
+
+  <section class="more" id="november">
+    <h2>What the November round changed</h2>
+    <div class="prose">
+      <p>The October tuning decoded the presets from the Synthex's EPROMs and fitted the engine's knob laws to the
+        recording: <a href="https://joakimeriksson.github.io/ai-smarthome/synths/synthex-tuning.html">that story is
+        here</a>. Making the video put every preset next to the recording again, and three things stood out. Each was
+        fixed in <a href="https://joakimeriksson.github.io/ai-smarthome/synths/synthex/">synthex-web</a> first, then in
+        Scintilla, and each round was scored on the same forty stretches.</p>
+    </div>
+    <div class="fixes">
+      <div class="fix">
+        <h3>The oscillators lose their DC <span>synthex-web 2b0f5c3 · Scintilla #19</span></h3>
+        <p>A pulse wave of width <i>w</i> carries 2<i>w</i>&nbsp;−&nbsp;1 of DC: −0.81 on Electric piano&nbsp;I's 9&nbsp;%
+          pulse, more than its tone. It went through the filter and the amplifier and came out as a thump under every
+          note. The recording has nothing below 20 Hz on any of the forty. Each oscillator now reaches the mixer and
+          the ring modulator through a 5 Hz coupling, as if through a capacitor, which is how the Synthex's analogue
+          oscillators would reach theirs.</p>
+        <p class="moved"><b>Closer:</b> Brass II 8.2 → 5.7 dB, Pianet 11.6 → 8.7, Electric piano I 7.6 → 5.4,
+          Clavichord II 6.2 → 4.5, Clavinet 5.1 → 3.5, Ring mod. 3.4 → 2.6. <b>Further:</b> Church organ 7.5 → 9.6.</p>
+      </div>
+      <div class="fix">
+        <h3>Key tracking and filter sustain <span>synthex-web 1da4205 · Scintilla #20</span></h3>
+        <p>Measured on the held notes that open each preset's passage. Full key tracking is a semitone per key, not
+          the 0.81 the schematic's resistors suggested: above C2 the organs fell 0.19 semitone further behind with every
+          key. And the filter envelope's sustain reaches 0.7 of its knob: once their decay was over, the presets that
+          sit high at sustain were 15 to over 30 semitones brighter than the recording.</p>
+        <p class="moved"><b>Closer:</b> Electronic organ 7.2 → 4.5 dB, Reed organ 8.0 → 6.1, Pianet 8.7 → 7.6, Church
+          organ 9.6 → 8.5, Filtered strings 7.5 → 6.6, Phased sweep 2.2 → 1.6. <b>Further:</b> Electric piano II
+          6.5 → 11.2: its synced second oscillator now sits under the filter's resonance near 2 kHz.</p>
+      </div>
+      <div class="fix">
+        <h3>Filtered chorus <span>synthex-web 25de95b · Scintilla #20</span></h3>
+        <p>Its two opening notes were 12 to 15 semitones brighter than the recording through their first second: the
+          filter envelope reaches 0.64 to 0.71 of its decoded amount. It is a correction for this one preset, not a rule:
+          applied to the similar slow-attack presets, it took Brass II from 4.6 to 12 dB.</p>
+        <p class="moved"><b>Closer:</b> Filtered chorus 8.2 → 3.1 dB.</p>
+      </div>
+    </div>
+    <div class="legend"><span><i class="dot" style="background:var(--before)"></i>Before November</span>
+      <span><i class="dot" style="background:var(--sc)"></i>After the three fixes</span></div>
+    <div class="chart-box" id="rounds"></div>
+    <p class="tour-cap"><span>Each preset's spectrum difference before and after, closest first. The mean went
+      <span id="means"></span>.</span></p>
+  </section>
+
+  <section class="more" id="off">
+    <h2>Still off</h2>
+    <div class="prose">
+      <p>The furthest six, and what their spectra say. The differences are relative, because the score is level-free:
+        "more top" means more top than bottom, compared with the recording.</p>
+    </div>
+    <div class="worst" id="worst"></div>
+    <aside class="note">One difference is shared by all forty. Above 5 kHz Scintilla reads 2 to 8 dB stronger than the
+      recording, averaged over the presets. The recording is a 56 kbps mono MP3, which keeps little up there, so part of
+      every top-band difference is the file, not the synth.</aside>
+  </section>
+
+  <section class="more" id="engine">
+    <h2>One engine, two places</h2>
+    <div class="prose">
+      <p><a href="https://joakimeriksson.github.io/ai-smarthome/synths/synthex/">synthex-web</a> plays the same presets in
+        a browser. Scintilla is its engine ported to integer C, for a pocket synth with a 240 MHz core and no
+        floating-point unit. Every change to Scintilla's engine is checked against synthex-web's, preset by preset: 80
+        patches in four scenarios each, level within 0.06 dB. The firmware running in an emulator of the FM-1's CPU must
+        produce exactly the same samples as the build on a computer. So a fix lands in synthex-web first, then here,
+        and both play it.</p>
+      <p>Pick a program in synthex-web to hear it in a browser; on an FM-1, the PRESETS knob reaches all forty.</p>
+    </div>
+  </section>
+
+  <section class="more" id="how">
+    <h2>How it was measured</h2>
+    <ol class="steps">
+      <li><b>Where each preset is.</b> The recording plays the forty in order. A mark was set where each one starts: the
+        first ten and the last ten are certain, the middle twenty less so.</li>
+      <li><b>A stretch to compare.</b> Three seconds inside each preset's part (4.5 s for the slow sweeps), starting on a
+        clear note and chosen so the playing doesn't pause.</li>
+      <li><b>The notes he plays.</b> The engine renders every key of the preset on its own. The stretch's spectrogram is
+        then explained as a mix of those keys, which turns sound back into notes, footages and transposes included.
+        Take-off and Landing, a held note under a slow sweep, were set by hand.</li>
+      <li><b>Scintilla plays them.</b> The real firmware runs in fm1-emu, an emulator of the FM-1, from MIDI: the same
+        preset, the same notes and timing. The video is that run, filmed, its sound unedited except for the level.</li>
+      <li><b>The score.</b> The spectrum difference described above, between the recording's stretch and the
+        firmware's.</li>
+    </ol>
+    <aside class="note">Read a difference under a dB as noise. Two runs of the same notes, one with the recording played
+      in between, score within 0.1 dB of each other on half the presets, but up to 3.5 dB apart on a few with slow attacks
+      and long tails (Chorale, Chimes, Church organ), where what still rings from the previous preset depends on the run.
+      The round-by-round numbers above come from one kind of run, the video's from the other. And the transcription gets
+      some notes wrong: chords, and his joystick, are harder than single lines.</aside>
+    <p class="prose" style="color:var(--ink2)">The tools are in the repository:
+      <a href="https://github.com/joakimeriksson/scintilla-fm1/tree/main/demo/tour"><code>demo/tour/</code></a>
+      (<code>transcribe.py</code>, <code>video.py</code>, and <code>page.py</code>, which made this page's data).</p>
+  </section>
+
+  <footer>
+    <p>The Synthex recording: Per Kristian Risvik, <a href="https://www.perkristian.net/sounds/">perkristian.net</a>.
+      It is not copied here: each preset links to its moment in his file, and this page shows only its spectra and
+      spectrograms. The audio on this page is Scintilla's.</p>
+    <p>GPL-3.0-only, <a href="https://github.com/joakimeriksson/scintilla-fm1">source on GitHub</a>. Not affiliated with
+      or endorsed by Elka, Generalmusic, Behringer / Music Tribe, M-VAVE or Jean-Michel Jarre.</p>
+  </footer>
+</main>
+
+<audio id="audio" src="tour.mp3" preload="none"></audio>
+<script src="data.js"></script>
+<script>
+"use strict";
+// The YouTube video's id, once it is up; the section stays hidden until then
+const VIDEO = "";
+
+const D = window.TUNING, P = D.presets, END = D.tour.end;
+const RECORDING = "https://www.perkristian.net/sounds/synthex_presets.mp3";
+const NS = "http://www.w3.org/2000/svg";
+const $ = (id) => document.getElementById(id);
+const el = (tag, attrs = {}, text) => {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  if (text != null) e.textContent = text;
+  return e;
+};
+const svgEl = (tag, attrs = {}) => {
+  const e = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  return e;
+};
+const mmss = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+const bankProg = (slot) => `Bank ${Math.floor((slot - 10) / 10) + 1} · program ${(slot - 10) % 10}`;
+const mean = (a) => a.reduce((x, y) => x + y, 0) / a.length;
+const fmtHz = (f) => f >= 1000 ? `${(f / 1000).toFixed(f >= 10000 ? 0 : 1)} kHz` : `${f} Hz`;
+
+// ---- the sound: one file, the video's sound track; a preset plays its stretch of it
+const audio = $("audio");
+let stopAt = null, playingBtn = null;
+function play(from, until, btn) {
+  if (playingBtn) playingBtn.classList.remove("playing"), playingBtn.textContent = "▶ Play";
+  playingBtn = btn || null;
+  if (btn) btn.classList.add("playing"), btn.textContent = "■ Stop";
+  stopAt = until;
+  audio.currentTime = Math.max(0, from);
+  audio.play();
+  $("tour-stop").hidden = false;
+}
+function stop() {
+  audio.pause();
+  stopAt = null;
+  if (playingBtn) playingBtn.classList.remove("playing"), playingBtn.textContent = "▶ Play";
+  playingBtn = null;
+  $("tour-stop").hidden = true;
+  $("tour-head").style.opacity = 0;
+}
+$("tour-stop").onclick = stop;
+audio.addEventListener("ended", stop);
+
+const presetAt = (t) => [...P].reverse().find((p) => t >= p.t - 0.35);
+function tick() {
+  if (!audio.paused) {
+    const t = audio.currentTime;
+    if (stopAt != null && t >= stopAt) stop();
+    else {
+      const head = $("tour-head");
+      head.style.opacity = 1;
+      head.style.left = `${(t / END) * 100}%`;
+      const cur = t < D.tour.harp - 0.4 ? presetAt(t) : null;
+      for (const s of $("tour-nums").children) s.classList.toggle("on", cur && +s.dataset.slot === cur.slot);
+    }
+  }
+  requestAnimationFrame(tick);
+}
+requestAnimationFrame(tick);
+
+// ---- the tour strip
+const tour = $("tour"), tip = $("tour-tip");
+for (const p of P) {
+  const s = el("span", { "data-slot": p.slot }, p.slot);
+  s.style.left = `${(p.t / END) * 100}%`;
+  $("tour-nums").append(s);
+}
+const tAt = (ev) => {
+  const r = tour.getBoundingClientRect();
+  return Math.min(1, Math.max(0, (ev.clientX - r.left) / r.width)) * END;
+};
+tour.addEventListener("mousemove", (ev) => {
+  const t = tAt(ev), r = tour.getBoundingClientRect();
+  const p = t >= D.tour.harp - 0.4 ? null : presetAt(t);
+  tip.textContent = p ? `${p.slot} ${p.name} · ${p.score.toFixed(1)} dB` : t >= D.tour.harp - 0.4 ? "The laser harp, on Ring mod." : "Intro";
+  tip.style.display = "block";
+  tip.style.left = `${Math.min(ev.clientX - r.left + 12, r.width - tip.offsetWidth - 8)}px`;
+});
+tour.addEventListener("mouseleave", () => (tip.style.display = "none"));
+tour.addEventListener("click", (ev) => play(tAt(ev), null, null));
+tour.addEventListener("keydown", (ev) => {
+  if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); audio.paused ? play(audio.currentTime || 0, null, null) : stop(); }
+});
+
+// ---- the headline numbers
+const scores = P.map((p) => p.score);
+const roundMeans = [0, 1, 2, 3].map((i) => mean(P.map((p) => p.rounds[i])));
+const within = (x) => P.filter((p) => p.score < x).length;
+for (const [b, s] of [
+  [`${mean(scores).toFixed(1)} dB`, "the mean spectrum difference to the real Synthex over the forty, as the video shows them"],
+  [`${within(5)} of 40`, `presets within 5 dB of the recording, ${within(3)} of them within 3 dB`],
+  [`${roundMeans[0].toFixed(1)} → ${roundMeans[3].toFixed(1)} dB`, "what the November round of tuning did to the mean, in three fixes"],
+]) {
+  const d = el("div", { class: "stat" });
+  d.append(el("b", {}, b), el("span", {}, s));
+  $("stats").append(d);
+}
+$("means").textContent = roundMeans.map((m) => m.toFixed(2)).join(" → ") + " dB over the three fixes";
+
+// ---- a preset's two spectra: the recording's and Scintilla's third-octave bands, level-free
+const LO = 30, HI = 12000, YMIN = -60, YMAX = 6;
+function spectrumChart(p, W = 460, H = 150) {
+  const m = { l: 34, r: 8, t: 8, b: 22 };
+  const x = (f) => m.l + (Math.log(f / LO) / Math.log(HI / LO)) * (W - m.l - m.r);
+  const y = (v) => m.t + ((YMAX - Math.max(YMIN, Math.min(YMAX, v))) / (YMAX - YMIN)) * (H - m.t - m.b);
+  const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, role: "img",
+    "aria-label": `${p.name}: third-octave spectrum of the recording and of Scintilla, ${p.score.toFixed(1)} dB apart` });
+  for (const v of [0, -20, -40, -60]) {
+    svg.append(svgEl("line", { x1: m.l, x2: W - m.r, y1: y(v), y2: y(v), stroke: "var(--grid)", "stroke-width": 1 }));
+    const t = svgEl("text", { x: m.l - 6, y: y(v) + 4, "text-anchor": "end", fill: "var(--dim)", "font-size": 10 });
+    t.textContent = v === 0 ? "0 dB" : v;
+    svg.append(t);
+  }
+  for (const f of [100, 1000, 10000]) {
+    const t = svgEl("text", { x: x(f), y: H - 6, "text-anchor": "middle", fill: "var(--dim)", "font-size": 10 });
+    t.textContent = fmtHz(f);
+    svg.append(t);
+  }
+  const path = (vals) => {
+    let d = "", pen = false;
+    D.bands.forEach((f, i) => {
+      if (!p.keep[i]) { pen = false; return; }
+      d += `${pen ? "L" : "M"}${x(f).toFixed(1)},${y(vals[i]).toFixed(1)}`;
+      pen = true;
+    });
+    return d;
+  };
+  for (const [vals, c] of [[p.hw, "var(--hw)"], [p.sc, "var(--sc)"]])
+    svg.append(svgEl("path", { d: path(vals), fill: "none", stroke: c, "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round" }));
+  // hover: the nearest band, both values
+  const cross = svgEl("line", { y1: m.t, y2: H - m.b, stroke: "var(--dim)", "stroke-width": 1, opacity: 0 });
+  const dots = [svgEl("circle", { r: 4, fill: "var(--hw)", stroke: "var(--bg2)", "stroke-width": 2, opacity: 0 }),
+                svgEl("circle", { r: 4, fill: "var(--sc)", stroke: "var(--bg2)", "stroke-width": 2, opacity: 0 })];
+  svg.append(cross, ...dots);
+  const hit = svgEl("rect", { x: m.l, y: m.t, width: W - m.l - m.r, height: H - m.t - m.b, fill: "transparent" });
+  svg.append(hit);
+  const box = el("div", { class: "p-chart" });
+  const tt = el("div", { class: "tip" });
+  box.append(svg, tt);
+  hit.addEventListener("mousemove", (ev) => {
+    const r = svg.getBoundingClientRect(), sx = ((ev.clientX - r.left) / r.width) * W;
+    let i = 0, best = 1e9;
+    D.bands.forEach((f, k) => { if (p.keep[k] && Math.abs(x(f) - sx) < best) best = Math.abs(x(f) - sx), i = k; });
+    const cx = x(D.bands[i]);
+    cross.setAttribute("x1", cx); cross.setAttribute("x2", cx); cross.setAttribute("opacity", 1);
+    [p.hw[i], p.sc[i]].forEach((v, k) => { dots[k].setAttribute("cx", cx); dots[k].setAttribute("cy", y(v)); dots[k].setAttribute("opacity", 1); });
+    tt.innerHTML = `<b>${fmtHz(D.bands[i])}</b><br><i style="background:var(--hw)"></i>Synthex ${p.hw[i].toFixed(1)} dB<br>` +
+      `<i style="background:var(--sc)"></i>Scintilla ${p.sc[i].toFixed(1)} dB`;
+    tt.style.display = "block";
+    const px = (cx / W) * r.width;
+    tt.style.left = `${px + 12 + tt.offsetWidth > r.width ? px - tt.offsetWidth - 12 : px + 12}px`;
+    tt.style.top = "4px";
+  });
+  hit.addEventListener("mouseleave", () => { tt.style.display = "none"; cross.setAttribute("opacity", 0); dots.forEach((d) => d.setAttribute("opacity", 0)); });
+  return box;
+}
+
+// the spectrograms' frequency labels: rows on a log axis from spec.lo (bottom) to spec.hi (top), two panels
+function specFigure(p, lazy = true) {
+  const f = el("div", { class: "spec" });
+  const img = el("img", { src: `spec/${p.slot}.webp`, width: 1200, height: 528,
+    alt: `Spectrograms of ${p.name}: the Synthex recording above, Scintilla below, the same ${p.len} s and the same notes` });
+  if (lazy) img.loading = "lazy";
+  f.append(img);
+  const H = 528, half = 260, gap = 8, { lo, hi } = D.spec;
+  for (const [top, label, c] of [[0, "SYNTHEX 1981", "var(--hw)"], [half + gap, "SCINTILLA", "var(--sc)"]]) {
+    const t = el("span", { class: "tag" });
+    t.style.top = `${((top + 6) / H) * 100}%`;
+    t.innerHTML = `<i style="background:${c}"></i>${label}`;
+    f.append(t);
+    for (const hz of [100, 1000]) {
+      const s = el("span", { class: "hz" }, fmtHz(hz));
+      s.style.top = `${((top + (1 - Math.log(hz / lo) / Math.log(hi / lo)) * half) / H) * 100}%`;
+      f.append(s);
+    }
+  }
+  return f;
+}
+
+function card(p, lazy = true) {
+  const c = el("article", { class: "preset", id: `p${p.slot}` });
+  const head = el("div", { class: "p-head" });
+  const name = el("div");
+  name.append(el("small", {}, bankProg(p.slot)), el("h3", {}, p.name));
+  const sc = el("div", { class: "p-score" });
+  sc.append(el("b", {}, `${p.score.toFixed(1)} dB`), el("small", {}, "spectrum difference"));
+  head.append(el("div", { class: "led" }, p.slot), name, sc);
+  const foot = el("div", { class: "p-foot" });
+  const btn = el("button", { type: "button", "aria-label": `Play ${p.name} on Scintilla` }, "▶ Play");
+  btn.onclick = () => (playingBtn === btn ? stop() : play(p.t - 0.05, p.t + p.len + 0.4, btn));
+  const a = el("a", { href: `${RECORDING}#t=${Math.floor(p.at)}`, target: "_blank", rel: "noopener" }, `The Synthex at ${mmss(p.at)} ↗`);
+  foot.append(btn, a, el("span", {}, `${p.notes} note${p.notes === 1 ? "" : "s"}, ${p.len} s`));
+  c.append(head, specFigure(p, lazy), spectrumChart(p), foot);
+  return c;
+}
+
+// ---- closest and furthest
+const byScore = [...P].sort((a, b) => a.score - b.score);
+$("pair").append(card(byScore[0], false), card(byScore[byScore.length - 1], false));
+
+// ---- all forty
+const grid = $("grid");
+const cards = new Map(P.map((p) => [p.slot, card(p)]));
+function sortBy(how) {
+  const order = how === "slot" ? [...P] : how === "best" ? [...byScore] : [...byScore].reverse();
+  grid.replaceChildren(...order.map((p) => cards.get(p.slot)));
+  document.querySelectorAll("[data-sort]").forEach((b) => b.setAttribute("aria-pressed", b.dataset.sort === how));
+}
+document.querySelectorAll("[data-sort]").forEach((b) => (b.onclick = () => sortBy(b.dataset.sort)));
+sortBy("slot");
+const tb = $("table").tBodies[0];
+for (const p of P) {
+  const tr = el("tr");
+  tr.append(el("td", {}, p.slot), el("td", {}, p.name), ...p.rounds.map((v) => el("td", { class: "n" }, v.toFixed(1))),
+            el("td", { class: "n" }, p.score.toFixed(1)), el("td", { class: "n" }, p.notes));
+  tb.append(tr);
+}
+
+// ---- before and after November: a dot pair per preset, closest first
+(function rounds() {
+  const rows = [...P].sort((a, b) => a.rounds[3] - b.rounds[3]);
+  const W = 1000, row = 19, m = { l: 150, r: 24, t: 26, b: 8 }, H = m.t + rows.length * row + m.b;
+  const xmax = 18, x = (v) => m.l + (v / xmax) * (W - m.l - m.r);
+  const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Each preset's spectrum difference before and after the November fixes" });
+  for (let v = 0; v <= xmax; v += 3) {
+    svg.append(svgEl("line", { x1: x(v), x2: x(v), y1: m.t - 6, y2: H - m.b, stroke: "var(--grid)", "stroke-width": 1 }));
+    const t = svgEl("text", { x: x(v), y: 14, "text-anchor": "middle", fill: "var(--dim)", "font-size": 12 });
+    t.textContent = v === 0 ? "0 dB" : v;
+    svg.append(t);
+  }
+  const box = $("rounds"), tt = el("div", { class: "tip" });
+  rows.forEach((p, i) => {
+    const cy = m.t + i * row + row / 2, a = p.rounds[0], b = p.rounds[3];
+    const g = svgEl("g");
+    const lab = svgEl("text", { x: m.l - 10, y: cy + 4, "text-anchor": "end", fill: "var(--ink2)", "font-size": 12.5 });
+    lab.textContent = `${p.slot} ${p.name}`;
+    g.append(lab, svgEl("line", { x1: x(a), x2: x(b), y1: cy, y2: cy, stroke: "var(--line)", "stroke-width": 2 }),
+      svgEl("circle", { cx: x(a), cy, r: 4.5, fill: "var(--before)", stroke: "var(--bg2)", "stroke-width": 2 }),
+      svgEl("circle", { cx: x(b), cy, r: 4.5, fill: "var(--sc)", stroke: "var(--bg2)", "stroke-width": 2 }),
+      svgEl("rect", { x: 0, y: cy - row / 2, width: W, height: row, fill: "transparent" }));
+    g.addEventListener("mousemove", (ev) => {
+      const r = box.getBoundingClientRect();
+      tt.innerHTML = `<b>${p.slot} ${p.name}</b><br>` + ["Original", "AC coupling", "Tracking, sustain", "Filtered chorus"]
+        .map((n, k) => `${n}: ${p.rounds[k].toFixed(1)} dB`).join("<br>");
+      tt.style.display = "block";
+      tt.style.left = `${Math.min(ev.clientX - r.left + 14, r.width - tt.offsetWidth - 8)}px`;
+      tt.style.top = `${ev.clientY - r.top + 14}px`;
+    });
+    g.addEventListener("mouseleave", () => (tt.style.display = "none"));
+    svg.append(g);
+  });
+  box.append(svg, tt);
+})();
+
+// ---- still off: the six furthest, with what their bands say (written from the data, page.py's spectra)
+const WHY = {
+  26: "Scintilla plays a few clean harmonics where the recording has a dense band: 10 dB less below 1 kHz, 10 to 17 dB more above 4 kHz. Either the sweep or the three high notes the transcription found are not what the Synthex played.",
+  39: "21 dB more above 4 kHz. Part of that is the transcription: it hears the mallet's strike as two short notes at the top of the keyboard, and Scintilla plays them.",
+  43: "One held note under a long sweep, 7 to 13 dB brighter above 250 Hz. The October tuning already suspected the top of the envelope table, which reads about twice too short on Chimes and Landing.",
+  37: "11 dB more between 1 and 4 kHz. It got worse with the key tracking (6.5 → 11.2): its synced second oscillator now sits under the filter's resonance near 2 kHz.",
+  23: "12 dB less bass and 5 to 7 dB more above 250 Hz. The DC fix moved it further away (7.5 → 9.6), the key tracking brought some back (8.5). Its mark in the recording is one of the uncertain middle twenty.",
+  22: "The same tilt as the organ: 12 dB less bass, 3 to 9 dB more above 250 Hz. None of the November fixes moved it.",
+};
+for (const p of byScore.slice(-6).reverse()) {
+  const d = el("div");
+  const h = el("h3");
+  h.innerHTML = `<a href="#p${p.slot}">${p.slot} ${p.name}</a><b>${p.score.toFixed(1)} dB</b>`;
+  d.append(h, el("p", {}, WHY[p.slot] || ""));
+  $("worst").append(d);
+}
+document.querySelectorAll('#worst a').forEach((a) => a.addEventListener("click", () => {
+  sortBy("slot");
+  const c = cards.get(+a.getAttribute("href").slice(2));
+  c.classList.add("focus");
+  setTimeout(() => c.classList.remove("focus"), 2400);
+}));
+
+// ---- the video, once it is on YouTube: the poster until clicked, then YouTube's player
+if (VIDEO) {
+  $("video").hidden = false;
+  $("video-btn").onclick = () => {
+    stop();
+    const f = el("iframe", { src: `https://www.youtube-nocookie.com/embed/${VIDEO}?autoplay=1`, title: "Scintilla: the forty presets",
+      allow: "autoplay; encrypted-media; picture-in-picture; fullscreen", allowfullscreen: "" });
+    $("video-btn").replaceChildren(f);
+  };
+}
+</script>
+</body>
+</html>

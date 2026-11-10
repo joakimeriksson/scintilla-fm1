@@ -1,0 +1,40 @@
+slot	name	score	score_morning	spectrum_dB	brightness_st	envelope_dB	passage_at
+10	Chunky Synth	8	8	2.5	8.1	2.8	0:00
+11	Wah brass	10	9	2.7	6.8	6.8	0:16
+12	Fat Sound	13	12	4.8	6.1	9.3	0:31
+13	Metallic	6	4	2.4	4.1	3.4	0:47
+14	Pan flutes	13	12	5.2	5.2	11.0	1:05
+15	Tremolo piano	8	8	4.8	2.6	3.9	1:27
+16	Chorale	9	16	4.7	2.8	5.5	1:57
+17	Brass I	8	11	3.2	2.3	8.1	2:28
+18	Brass II	5	5	2.8	0.1	5.3	2:44
+19	Brass III	8	9	2.2	3.4	7.6	2:57
+20	Double basses	6	5	2.2	1.9	5.0	3:16
+21	Ceilos	9	11	3.0	6.6	6.2	3:47
+22	Violins	9	8	4.8	2.1	5.9	4:02
+23	Church organ	15	21	10.4	3.6	6.3	4:20
+24	Reed organ	10	14	6.3	1.1	7.2	4:48
+25	Electronic organ	10	11	5.3	3.4	5.4	5:09
+26	High pass sweep	18	14	12.5	3.5	7.0	5:27
+27	Filtered brass	12	11	5.4	8.3	5.5	5:42
+28	Filtered chorus	11	21	3.9	7.9	5.7	5:58
+29	Filtered strings	15	14	6.9	10.2	5.1	6:24
+30	Metallic piano	8	10	3.0	2.9	7.3	7:06
+31	Pianet	9	11	6.2	2.0	3.1	7:27
+32	Funky Clav.	8	8	3.5	5.2	4.0	7:49
+33	Clavichord I	8	8	5.1	0.2	5.9	8:04
+34	Clavichord II	7	7	3.3	0.3	7.8	8:20
+35	Clavinet	6	6	3.2	2.0	3.6	8:41
+36	Electric piano I	13	13	2.3	4.1	17.5	8:58
+37	Electric piano II	14	16	9.1	6.6	4.0	9:15
+38	Chimes	9	10	7.3	0.2	3.7	9:41
+39	Vibes	11	11	9.1	0.7	3.0	9:56
+40	Sweep 1	5	4	2.1	3.2	2.6	10:14
+41	Sweep 2	5	5	2.1	0.5	4.8	11:03
+42	Take-off	7	8	2.9	0.9	7.9	11:22
+43	Landing	17	38	7.2	14.1	4.7	12:08
+44	Wash of sound	9	25	3.1	9.6	2.2	12:38
+45	Fast decay	6	9	2.0	3.7	3.2	12:53
+46	Ring mod.	11	8	3.7	5.6	8.2	13:09
+47	Phased sweep	6	24	2.5	4.1	3.7	14:02
+49	Whistle	20	20	11.2	8.4	9.9	14:59
