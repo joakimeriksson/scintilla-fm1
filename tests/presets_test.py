@@ -19,7 +19,7 @@ from host_cc import host_cc
 # Captured from the pre-compression bank; includes every field and padding byte.
 # Update only for intentional sound/name changes, after the reference check.
 # 2026-11-10: synthex-web 452883a: key tracking 1.0 st per key, filter sustain 0.7, Filtered chorus's envelope x 0.7
-PATCH_SHA256 = 'c254e1a87e4020dd761394de9f40f8bd7742445514af6f2e366c2b630ee669a4'
+PATCH_SHA256 = '5209b6a51f127ae6b2f205055547e29098448765c26bb753c07c71f64a66acc0'
 ROM_SHA256 = 'a3b49f9ace62011cc5b2b1b0a18e5aa18ff74a392450944ef5cc56fd3f291593'
 
 

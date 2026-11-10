@@ -3,7 +3,9 @@
  * time / sc_render_end), as fm1-dock's module splits it between the FM-1's cores, against sc_render:
  * the same samples. Every preset, and every fourth as a double (both layers), with an 8-note chord
  * struck, repeated and released, in runs of 256, 192 and 128 frames. Built with -DSC_LANES=2 -pthread
- * (tests/run.sh). */
+ * (tests/run.sh).
+ * Also the layer's LFO: after every block the voices of a layer, sounding or silent, rendered on either
+ * core, hold the same LFO phases (a patch whose LFO is key-synced apart: there each note restarts its own). */
 #include <pthread.h>
 #include <stdatomic.h>
 #include <stdio.h>
@@ -33,7 +35,7 @@ int main(void)
     static const uint8_t chord[8] = { 36, 43, 48, 52, 55, 59, 62, 67 };
     pthread_t t;
     pthread_create(&t, 0, core1, 0);
-    long bad = 0, blocks = 0;
+    long bad = 0, blocks = 0, apart = 0;
     for (int c = 0; c < SC_N_PRESETS + SC_N_PRESETS / 4; c++) {
         sc_patch_t P;
         sc_preset_load((unsigned)(c < SC_N_PRESETS ? c : 4 * (c - SC_N_PRESETS)), &P);
@@ -63,10 +65,17 @@ int main(void)
             blocks++;
             if (memcmp(oa, ob, 2 * n * sizeof oa[0]) && bad++ < 5)
                 printf("split: config %d block %d differs\n", c, b);
+            for (int k = 0; k < (c >= SC_N_PRESETS ? 2 : 1); k++)
+                for (int i = 1; i < SC_VOICES; i++) {
+                    const sc_voice_t *v0 = B.layer[k].v, *v = v0 + i;
+                    if ((v->lfo1.ph != v0->lfo1.ph && !P.layer[k].lfo[0].sync) ||
+                        (v->lfo2.ph != v0->lfo2.ph && !P.layer[k].lfo[1].sync))
+                        if (apart++ < 5) printf("split: config %d block %d layer %d voice %d: LFO out of step\n", c, b, k, i);
+                }
         }
     }
     atomic_store(&quit, 1);
     pthread_join(t, 0);
-    printf("split: %ld blocks on two threads, %ld differ from sc_render\n", blocks, bad);
-    return bad != 0;
+    printf("split: %ld blocks on two threads, %ld differ from sc_render, %ld with a voice's LFO out of step\n", blocks, bad, apart);
+    return bad != 0 || apart != 0;
 }

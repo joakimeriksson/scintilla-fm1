@@ -68,13 +68,18 @@ static void run_voice(const sc_patch_t *P, const scen_t *sc, const char *out)
     perf_of(sc, &perf);
     sc_prep(&prep, &P->layer[0], &perf);
     sc_voice_init(&v, 12345);
-    int e = 0;
+    int e = 0, held = 0;
     long i = 0;
     while (i < n) {
         double t = (double)i / SC_FS;
         while (e < sc->n && sc->ev[e].t <= t) {
-            if (sc->ev[e].on) sc_voice_note_on(&v, &prep, sc->ev[e].note, q16(sc->ev[e].vel));
-            else sc_voice_note_off(&v, &prep);
+            if (sc->ev[e].on) {                 /* the layer's LFO strobe, as the synth's layer_on */
+                if (held++ == 0 && P->layer[0].lfo[0].delay > 0) sc_voice_lfo_sync(&v, &prep);
+                sc_voice_note_on(&v, &prep, sc->ev[e].note, q16(sc->ev[e].vel));
+            } else {
+                if (held > 0) held--;
+                sc_voice_note_off(&v, &prep);
+            }
             e++;
         }
         long next = n;

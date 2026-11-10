@@ -4,6 +4,18 @@
 
 **The sound**
 
+- One LFO per layer, as the Synthex has (its LFO board, and the firmware's key-assign routine): it runs whether or
+  not a key is down, every voice of the layer in step, and a key restarts it, with its delay, only when no other
+  key of the layer is held and the preset has an LFO delay. Until now every voice had its own, stopped while the
+  voice was silent, and the delay played once, at power-on: Whistle's and the strings' vibrato now fades in at the
+  start of each phrase, and Landing's slow sweep carries on across notes instead of starting again in each voice.
+- Both LFO depth knobs of the ROM presets read inverted, as the LFO board's circuit says and the recording
+  confirms: the organs' tremolo is a fifth of what it was (Church organ, Reed organ: 1 dB of ripple, not 4-5),
+  Tremolo piano's and Electric piano II's a little deeper, the pulse-width sweeps of Chorale, Clavinet and the
+  sweeps follow the inverted knob.
+- Three ROM presets corrected against the recording of the instrument, as synthex-web's bank: High pass sweep
+  (filter envelope at half its decoded amount, cutoff 8 semitones lower), Filtered brass (envelope x 0.7, cutoff 6
+  semitones higher) and Clavichord I (envelope x 0.7, cutoff an octave lower).
 - The oscillators reach the mixer and the ring modulator through a 5 Hz coupling, as synthex-web's now do: a narrow
   pulse's DC (2 pw - 1 of it) no longer thumps under every note (Brass II, Funky Clav., Electric piano I, the
   clavichords, Metallic piano, Pianet, Sweep 1). It costs ~18 instructions a voice-sample: Chunky Synth x8 19 -> 22 %
