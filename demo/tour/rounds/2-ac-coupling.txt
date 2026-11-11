@@ -1,0 +1,40 @@
+  10 Chunky Synth       at    1.5 s  10 notes   3.2 dB
+  11 Wah brass          at   22.2 s   6 notes   4.2 dB
+  12 Fat Sound          at   32.2 s   6 notes   4.5 dB
+  13 Metallic           at   47.4 s   2 notes   6.2 dB
+  14 Pan flutes         at   69.0 s  10 notes   2.7 dB
+  15 Tremolo piano      at   88.1 s   7 notes   4.3 dB
+  16 Chorale            at  117.5 s   7 notes   6.4 dB
+  17 Brass I            at  153.7 s   6 notes   2.6 dB
+  18 Brass II           at  164.5 s   9 notes   5.7 dB
+  19 Brass III          at  182.2 s  13 notes   5.6 dB
+  20 Double basses      at  196.5 s   6 notes   2.9 dB
+  21 Ceilos             at  227.3 s   6 notes   4.8 dB
+  22 Violins            at  242.3 s   5 notes  11.0 dB
+  23 Church organ       at  262.7 s   4 notes   9.6 dB
+  24 Reed organ         at  288.2 s   3 notes   8.0 dB
+  25 Electronic organ   at  312.6 s   4 notes   7.2 dB
+  26 High pass sweep    at  328.8 s   3 notes  16.5 dB
+  27 Filtered brass     at  349.5 s   5 notes   5.3 dB
+  28 Filtered chorus    at  358.4 s   3 notes   8.7 dB
+  29 Filtered strings   at  414.0 s  16 notes   7.5 dB
+  30 Metallic piano     at  428.6 s   5 notes   5.5 dB
+  31 Pianet             at  450.0 s   7 notes   8.7 dB
+  32 Funky Clav.        at  469.7 s   5 notes   5.1 dB
+  33 Clavichord I       at  491.1 s  13 notes   4.3 dB
+  34 Clavichord II      at  502.2 s  12 notes   4.5 dB
+  35 Clavinet           at  521.6 s   3 notes   3.5 dB
+  36 Electric piano I   at  541.0 s   7 notes   5.4 dB
+  37 Electric piano II  at  555.0 s   7 notes   6.5 dB
+  38 Chimes             at  581.6 s   3 notes  10.1 dB
+  39 Vibes              at  596.3 s   8 notes  12.7 dB
+  40 Sweep 1            at  614.0 s   3 notes   3.7 dB
+  41 Sweep 2            at  663.0 s   4 notes   3.6 dB
+  42 Take-off           at  682.0 s   1 notes   5.4 dB
+  43 Landing            at  728.5 s   1 notes  13.0 dB
+  44 Wash of sound      at  757.9 s   7 notes   4.1 dB
+  45 Fast decay         at  773.0 s   2 notes   2.3 dB
+  46 Ring mod.          at  789.6 s   3 notes   2.6 dB
+  47 Phased sweep       at  842.0 s  11 notes   2.2 dB
+  48 Bass pluck         at  856.6 s   4 notes   3.0 dB
+  49 Whistle            at  901.9 s   3 notes   7.9 dB

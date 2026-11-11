@@ -1,0 +1,41 @@
+slot	name	start_s	end_s
+10	Chunky Synth	0.55	16.89
+11	Wah brass	16.89	31.21
+12	Fat Sound	31.21	47.14
+13	Metallic	47.14	65.50
+14	Pan flutes	65.50	87.31
+15	Tremolo piano	87.31	117.42
+16	Chorale	117.42	148.26
+17	Brass I	148.26	164.09
+18	Brass II	164.09	177.29
+19	Brass III	177.29	196.22
+20	Double basses	196.22	227.19
+21	Ceilos	227.19	242.06
+22	Violins	242.06	260.65
+23	Church organ	260.65	287.81
+24	Reed organ	287.81	308.68
+25	Electronic organ	308.68	327.57
+26	High pass sweep	327.57	342.49
+27	Filtered brass	342.49	358.34
+28	Filtered chorus	358.34	366.02
+29	Filtered strings	366.02	426.16
+30	Metallic piano	426.16	446.96
+31	Pianet	446.96	469.33
+32	Funky Clav.	469.33	484.41
+33	Clavichord I	484.41	500.59
+34	Clavichord II	500.59	521.43
+35	Clavinet	521.43	538.29
+36	Electric piano I	538.29	554.43
+37	Electric piano II	554.43	580.76
+38	Chimes	580.76	595.63
+39	Vibes	595.63	613.85
+40	Sweep 1	613.85	662.41
+41	Sweep 2	662.41	681.86
+42	Take-off	681.86	728.14
+43	Landing	728.14	757.46
+44	Wash of sound	757.46	772.79
+45	Fast decay	772.79	789.57
+46	Ring mod.	789.57	840.76
+47	Phased sweep	840.76	856.37
+48	Bass pluck	856.37	876.21
+49	Whistle	876.21	911.90
