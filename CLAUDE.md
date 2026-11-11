@@ -15,6 +15,13 @@ the host build's. A mismatch is a bug (in the engine, the compiler or the emulat
 
 ## Verified
 
+- 2026-11-11, cross-mod from the DAC wave (synthex-web 462fac9, `prevOsc1 / 2`; here `xmod_tri`, `xmod_ringed`,
+  and the ROM decoder's depth 36438 = 0.556): `v->prev1 / prev2` are the oscillator's triangle from its phase after
+  the sample (4 |ph - 1/2| - 1), or for the ringed OSC2 its ramp, negated while s1 > 0; noise keeps its sample. The
+  staged render rebuilds OSC1's phases from `dt1` (OSC1 runs free). `tests/run.sh` 320 pairs inside the limits (level
+  max 0.04 dB, spectrum median 0.014 dB), 80 exact expansions (PATCH_SHA256 renewed), staged = per-sample; FM-1 =
+  host on the eleven configs and the 80 patches; `emu_test.py` passes. Cost: Ring mod. x8 61.8 -> 63.4 %, Fat Sound
+  55.6 -> 57.9 %, Metallic 59.2 -> 61.8 %, Landing 66.8 -> 69.7 %.
 - 2026-11-11, the schematic's ring modulator (synthex-web 873dfdb, `PolyBlepSquare.mirror`; here `sq_mirror`,
   `ring_of`, `sc_voice_t.dcr / pendm`, the lane's `s2x`, `mix_t.ring` = 2): for OSC2's pulse the ring output is
   (A - A') / 2 + s1 (A + A') / 2, A' the pulse of width 1 - pw from the same phase and sync, from the raw waves, with

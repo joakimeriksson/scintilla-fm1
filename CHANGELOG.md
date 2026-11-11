@@ -20,6 +20,11 @@
   note, 11 dB over it where the recording of the instrument has 3 (now 3). Clavichord II and Landing, the other two
   presets with it, come closer to the recording (4.3 -> 3.0 dB and 10.0 -> 8.2); Ring mod.'s sustained spectrum is
   0.5 dB further (2.9 -> 3.4). It costs: Ring mod. x8 54 -> 62 % of a core, Landing 58 -> 67 %.
+- Cross-mod (the Laser Harp, Landing, Metallic, Fat Sound) takes what the same schematic shows: not the other
+  oscillator's output pulse but the wave in front of its pulse comparator, a triangle (on the ringed oscillator, the
+  ramp as the other pulse flips it), at the depth the comparator's two resistors give. All four come closer to the
+  recording: Ring mod. 3.4 -> 2.9 dB (where it was before the ring modulator's change, now without the click),
+  Landing 8.2 -> 7.6, Metallic 6.3 -> 4.0, Fat Sound 4.2 -> 3.5. It costs 2-3 % of a core on those presets.
 - Three ROM presets corrected against the recording of the instrument, as synthex-web's bank: High pass sweep
   (filter envelope at half its decoded amount, cutoff 8 semitones lower), Filtered brass (envelope x 0.7, cutoff 6
   semitones higher) and Clavichord I (envelope x 0.7, cutoff an octave lower).

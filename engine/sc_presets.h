@@ -77,7 +77,7 @@ static void sc_rom_load(unsigned index, sc_patch_t *p)
     L->mix_noise = (v[39] & 192u) ? sc_rom_q(sc_rom_round(v[19] * 35, 12), 1000) : 0;
     L->noise_pink = (int8_t)((v[39] & 128u) != 0);
     L->ring = (int8_t)((v[37] & 192u) != 0);
-    L->cross = v[30] == 4 ? 11469 : 0; L->cross2 = v[29] == 4 ? 11469 : 0;
+    L->cross = v[30] == 4 ? 36438 : 0; L->cross2 = v[29] == 4 ? 36438 : 0;
     L->flt_mode = (int8_t)filter[v[32]];
     /* gen_factory.py's KEY_W = 1 / (2 CUT_SLOPE): full key tracking 1.0 st per key (synthex-web 1da4205) */
     /* gen_factory.py's FILTER_ENV_FIX, the presets corrected one by one against the recording: the cutoff
