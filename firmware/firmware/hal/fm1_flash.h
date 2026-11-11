@@ -143,7 +143,11 @@ RAMINL int fl_wait_ready(uint32_t max_us, uint32_t *took_us)
 
 /* ---- entry points: IRQs OFF, args/buffers in RAM ---- */
 
-static RAMFN uint32_t fl_jedec_ram(void)                 /* expect 0x856014 */
+/* The FM-1's flash chips: the Puya P25Q80 (0x856014), and the UC25HQ80 (0xB36014) of the units sold since autumn
+ * 2026: 1 MiB, the same generic SPI NOR commands this driver uses (9F, 05/35, 06, 20, 02, 0B), as Dinghy 0.5
+ * accepts it. Without it such a unit saved to RAM only and refused the updater. */
+#define FL_JEDEC_OK(id) ((id) == 0x856014u || (id) == 0xB36014u)
+static RAMFN uint32_t fl_jedec_ram(void)                 /* expect one of FL_JEDEC_OK */
 {
     fl_saved_t s; uint32_t id;
     if (fl_enter(&s)) return 0;

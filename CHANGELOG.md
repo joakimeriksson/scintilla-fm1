@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.1 (2026-11-11)
+
+Identity `FM-1_96300301`.
+
+- **Newer FM-1s.** The units sold since autumn 2026 carry another flash chip, a UC25HQ80 (JEDEC 0xB36014), where
+  the first ones have a Puya P25Q80 (0x856014). Scintilla knew only the first: on a newer FM-1 its loader refused
+  the install, and had it run there it would have kept its settings in RAM only and refused the updater. It
+  accepts both now, as Dinghy 0.5 does (`FL_JEDEC_OK`; the driver uses only generic SPI NOR commands). In fm1-emu
+  posing as the newer chip, 0.3.0 leaves no settings record in the flash and 0.3.1 writes it; not tried on a newer
+  FM-1 itself.
+
 ## 0.3.0 (2026-11-11)
 
 Identity `FM-1_96300300`. The second round of tuning against the recording of the instrument, this time from
