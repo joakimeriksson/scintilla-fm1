@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Scintilla: forty presets, measured</title>
-<meta name="description" content="How close Scintilla's forty Elka Synthex presets come to a real 1981 Synthex: every preset scored against Per Kristian Risvik's recording, with spectrograms, the November tuning and what is still off.">
+<meta name="description" content="How close Scintilla's forty Elka Synthex presets come to a real 1981 Synthex: every preset scored against Per Kristian Risvik's recording, with spectrograms, the November tuning, the schematics behind it and what is still off.">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Scintilla: forty Synthex presets, measured against the real one">
 <meta property="og:description" content="Every factory preset on the FM-1, scored against a recording of a 1981 Elka Synthex, with spectrograms side by side.">
@@ -12,7 +12,7 @@
 <meta property="og:image" content="https://joakimeriksson.github.io/scintilla-fm1/tuning/poster.jpg">
 <meta property="og:image:width" content="1280">
 <meta property="og:image:height" content="720">
-<meta property="og:image:alt" content="Scintilla on the FM-1 playing preset 46, Ring mod.: spectrum difference to the real Synthex 2.6 dB">
+<meta property="og:image:alt" content="Scintilla on the FM-1 playing preset 46, Ring mod.: spectrum difference to the real Synthex 2.9 dB">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="../screen.png" type="image/png">
 <style>
@@ -114,7 +114,7 @@
 
   .pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr)); gap: 16px; margin: 18px 0 8px; }
 
-  .fixes { display: grid; gap: 16px; margin: 18px 0 28px; }
+  .fixes { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; margin: 18px 0 28px; }
   .fix { background: var(--bg2); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; }
   .fix h3 { color: var(--amber); }
   .fix h3 span { color: var(--dim); font-weight: 400; font-size: 14px; margin-left: 8px; }
@@ -123,6 +123,9 @@
   .fix .moved b { color: var(--ink); font-weight: 600; }
   .chart-box { background: var(--bg2); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; position: relative; }
   .chart-box svg { display: block; width: 100%; height: auto; }
+  .circuit { overflow-x: auto; margin: 14px 0 6px; }
+  .circuit svg { display: block; width: 100%; min-width: 720px; height: auto; }
+  #onset { max-width: 620px; }
 
   .worst { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 16px; margin: 18px 0; }
   .worst > div { background: var(--bg2); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
@@ -137,7 +140,7 @@
   details { margin: 18px 0 0; }
   summary { cursor: pointer; color: var(--amber); font-size: 15px; }
   .tbl { overflow-x: auto; margin-top: 12px; }
-  table { border-collapse: collapse; font-size: 14px; min-width: 640px; width: 100%; }
+  table { border-collapse: collapse; font-size: 14px; min-width: 720px; width: 100%; }
   th, td { padding: 6px 12px 6px 0; border-bottom: 1px solid var(--line); text-align: left; }
   th { font: 600 12px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--dim); }
   td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
@@ -155,12 +158,12 @@
   </header>
 
   <section class="hero">
-    <p class="kicker">Tuning · November 2026</p>
+    <p class="kicker">Tuning · November 2026 · updated after the schematics</p>
     <h1>Forty presets, <em>measured</em> against a real Synthex.</h1>
     <p class="lede">Scintilla plays the Elka Synthex's forty factory presets on an M-VAVE FM-1. Each one was tuned
       towards Per Kristian Risvik's recording of a real 1981 Synthex: the notes he plays were found in the recording,
       the FM-1 played them on the same preset, and the two spectra were compared. Here are all forty: how close each
-      comes, what the latest round of tuning changed, and what is still off.</p>
+      comes, what two rounds of tuning changed, why the second one meant reading Elka's schematics, and what is still off.</p>
 
     <div class="tour">
       <div class="tour-scroll">
@@ -181,7 +184,7 @@
   <section class="more" id="video" hidden>
     <h2>The video</h2>
     <button class="video" id="video-btn" aria-label="Play the video on YouTube">
-      <img src="poster.jpg" width="1280" height="720" alt="Scintilla on the FM-1 playing Ring mod.: 2.6 dB from the real Synthex" loading="lazy">
+      <img src="poster.jpg" width="1280" height="720" alt="Scintilla on the FM-1 playing Ring mod.: 2.9 dB from the real Synthex" loading="lazy">
       <span class="play"></span>
     </button>
   </section>
@@ -215,12 +218,136 @@
     <details>
       <summary>The numbers as a table</summary>
       <div class="tbl"><table id="table"><thead><tr><th>#</th><th>Preset</th><th class="n">Original</th><th class="n">AC coupling</th>
-        <th class="n">Tracking, sustain</th><th class="n">Filtered chorus</th><th class="n">In the video</th><th class="n">Notes</th></tr></thead><tbody></tbody></table></div>
+        <th class="n">Tracking, sustain</th><th class="n">Filtered chorus</th><th class="n">Layer LFO</th><th class="n">In the video</th><th class="n">Notes</th></tr></thead><tbody></tbody></table></div>
     </details>
   </section>
 
+  <section class="more" id="schematics">
+    <h2>Then a click, and Elka's schematics</h2>
+    <div class="prose">
+      <p>The first November round fitted numbers to the recording. The second started by ear. Ring mod. is the Synthex's
+        laser harp sound, and on Scintilla each of its low notes began with a hard click. The
+        recording has none.</p>
+      <p>The score could not see it: a click lasts four milliseconds, and the score compares three seconds of spectrum.
+        Finding where it came from led to Elka's service manual, and to three places where the engine was a generic
+        synthesizer and the Synthex is not.</p>
+    </div>
+
+    <div class="fixes">
+      <div class="fix">
+        <h3>The click <span>10 to 14 ms into every low note</span></h3>
+        <p>The treble of one low C, millisecond by millisecond from the note's start, against its own level through the
+          note. On the Synthex it stays within 3 dB. On Scintilla it jumped 11 dB for four milliseconds.</p>
+        <div class="legend" style="margin-top:14px"><span><i style="background:var(--hw)"></i>Synthex, 1981</span>
+          <span><i style="background:var(--before)"></i>Scintilla before</span>
+          <span><i style="background:var(--sc)"></i>Scintilla now</span></div>
+        <div class="p-chart" id="onset"></div>
+        <div class="p-foot">
+          <button type="button" data-clip="harp-before.mp3" aria-label="Play the laser harp phrase on Scintilla before the fix">▶ Before</button>
+          <button type="button" data-clip="harp-now.mp3" aria-label="Play the laser harp phrase on Scintilla now">▶ Now</button>
+          <a href="https://www.perkristian.net/sounds/synthex_presets.mp3#t=789" target="_blank" rel="noopener">The Synthex at 13:09 ↗</a>
+          <span>the same four notes, levels as played</span>
+        </div>
+        <p>The cause was the first round's own fix. Since then each oscillator reached the ring modulator without its
+          DC, and the ring modulator multiplied the two. Ring mod.'s first oscillator is a 72&nbsp;% pulse: without its
+          DC it sits at +0.57 for most of the cycle and at −1.43 for the rest. Multiply by that and the second
+          oscillator comes out 8 dB louder for 4 ms of every 15 ms cycle. Ten milliseconds into a low note, such a patch
+          came through as a burst of treble.</p>
+        <p>Multiplying the oscillators with their DC instead removed the click and made the sustained sound worse (3.0
+          → 3.9 dB). So the question became what the Synthex does.</p>
+      </div>
+
+      <div class="fix">
+        <h3>The ring modulator is eight XOR gates <span>synthex-web #49 · Scintilla #23</span></h3>
+        <p>The voice board (410CST5800, page 22 of the service manual) has no multiplier on it. A Synthex oscillator is
+          digital up to its last step: a counter, eight XOR gates, and a resistor ladder that turns the eight bits into
+          a voltage.</p>
+        <div class="circuit"><svg viewBox="0 0 1000 392" role="img" aria-label="One Synthex oscillator as drawn on the voice board schematic: a counter feeds eight XOR gates, a resistor DAC and a comparator. A switch gives the XOR gates either the oscillator's own flip-flop or the other oscillator's pulse. The comparator also takes the pulse-width voltage and, for cross-mod, the other oscillator's DAC wave.">
+          <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0L10,5L0,10z" fill="#a39a94"/></marker></defs>
+          <g fill="#1c1920" stroke="#2c2830" stroke-width="1.5">
+            <rect x="20" y="52" width="170" height="70" rx="10"/><rect x="262" y="52" width="160" height="70" rx="10"/>
+            <rect x="494" y="52" width="150" height="70" rx="10"/><rect x="740" y="52" width="150" height="70" rx="10"/>
+            <rect x="96" y="232" width="210" height="64" rx="10"/><rect x="378" y="232" width="230" height="64" rx="10" stroke="#f0973a"/>
+            <rect x="664" y="232" width="150" height="64" rx="10"/><rect x="826" y="232" width="164" height="64" rx="10" stroke="#5be37a"/>
+          </g>
+          <g fill="#efe9e2" font-size="15" font-weight="600" text-anchor="middle">
+            <text x="105" y="83">Counter</text><text x="342" y="83">8 XOR gates</text><text x="569" y="83">Resistor DAC</text>
+            <text x="815" y="83">Comparator</text>
+            <text x="201" y="260">Its own flip-flop</text><text x="493" y="260">The other pulse</text>
+            <text x="739" y="260">PW knob</text><text x="908" y="260">The other DAC wave</text>
+          </g>
+          <g fill="#a39a94" font-size="12.5" text-anchor="middle">
+            <text x="105" y="104">8 bits, two 74LS193</text><text x="342" y="104">each bit, or its inverse</text>
+            <text x="569" y="104">8 bits to a voltage</text><text x="815" y="104">wave above the level?</text>
+            <text x="201" y="280">normal: every other ramp inverted</text><text x="493" y="280">RING MOD: inverted while high</text>
+            <text x="739" y="280">the pulse width</text><text x="908" y="280">MOD: 10K / 10K</text>
+            <text x="226" y="40">a ramp</text><text x="458" y="40">8 bits</text><text x="692" y="40">the DAC wave</text><text x="945" y="40">the pulse</text>
+            <text x="342" y="196">one or the other (a 4066 switch)</text><text x="815" y="196">added together</text>
+          </g>
+          <g stroke="#a39a94" stroke-width="1.5" fill="none" marker-end="url(#ah)">
+            <path d="M190,87H260"/><path d="M422,87H492"/><path d="M644,87H738"/><path d="M890,87H990"/>
+            <path d="M201,232V212H342V124"/><path d="M739,232V212H815V124"/>
+          </g>
+          <path d="M493,232V212H342" stroke="#f0973a" stroke-width="1.5" fill="none"/>
+          <path d="M908,232V212H815" stroke="#5be37a" stroke-width="1.5" fill="none"/>
+          <g fill="none" stroke-width="2" stroke-linejoin="round">
+            <path d="M60,372L100,332V372L140,332V372L180,332V372L220,332V372" stroke="#a39a94"/>
+            <path d="M400,372L440,332L480,372L520,332L560,372" stroke="#a39a94"/>
+            <path d="M740,372L780,332V372L800,352L820,372V332L840,352L860,332V372L900,332" stroke="#f0973a"/>
+          </g>
+          <g fill="#a39a94" font-size="12.5" text-anchor="middle">
+            <text x="140" y="322">the counter's ramp</text><text x="480" y="322">with the flip-flop: a triangle</text>
+            <text x="820" y="322">with the other pulse: the ring modulator</text>
+          </g>
+        </svg></div>
+        <p>Each XOR gate passes its bit or inverts it, and all eight take the same control line. Normally that line is
+          the oscillator's own flip-flop, which inverts every other ramp and so folds the ramp into a triangle. With RING
+          MOD on, a switch gives the gates the other oscillator's pulse instead: the wave runs backwards while that pulse
+          is high.</p>
+        <p>For a pulse wave this means the output is the pulse while the other oscillator is low and its mirror image
+          while it is high. The level never changes, and part of the second oscillator passes untouched, which no
+          multiplier gives. That is now what both engines compute.</p>
+        <p class="moved"><b>The click:</b> 11 dB → 3, the recording's. <b>Closer:</b> Landing 10.3 → 8.0, Clavichord II 4.0 → 3.3 dB. <b>Further:</b> Ring mod. itself, 3.0 → 3.5: without the click, but its sustained spectrum half a dB off again.</p>
+      </div>
+
+      <div class="fix">
+        <h3>Cross-mod takes the triangle, not the pulse <span>synthex-web #50 · Scintilla #24</span></h3>
+        <p>The same sheet shows the last step. The pulse is made by a comparator: high while the DAC wave is above the
+          pulse-width voltage. The MOD switch adds the other oscillator's DAC wave to that voltage through two 10K
+          resistors. So cross-mod is not driven by the other oscillator's output, as the engine had it, but by the
+          triangle in front of its comparator, and the two resistors fix the depth: the full wave moves the width by a
+          quarter either way. The engine had a third of that, fitted to another emulation.</p>
+        <p>One thing is fitted, not read: which way round the triangle acts. One sign serves all four presets that use
+          cross-mod.</p>
+        <p class="moved"><b>Closer:</b> Metallic 6.2 → 4.0, Ring mod. 3.5 → 2.9, Fat Sound 4.2 → 3.7 dB.</p>
+      </div>
+
+      <div class="fix">
+        <h3>One LFO for all the voices, and two knobs read backwards <span>synthex-web #48 · Scintilla #22</span></h3>
+        <p>The LFO board (410CST5850) holds one LFO for each layer, and the firmware's key-assign routine restarts it,
+          with its delay, only on the first key of a phrase. The engine had given every voice its own, stopped while
+          the voice was silent. Now a preset's vibrato fades in at the start of each phrase and its voices move
+          together, and Landing's slow sweep carries on across notes.</p>
+        <p>The same board shows that both LFO depth knobs are stored inverted in the preset memory, as the cutoff knob
+          is. The recording agrees: the organs' tremolo is 1 dB of ripple, not the 4 to 5 the engine played.</p>
+        <p>This run also carries three presets corrected against the recording: High pass sweep (filter envelope at half
+          its decoded amount, cutoff 8 semitones lower), Filtered brass and Clavichord I.</p>
+        <p class="moved"><b>Closer:</b> High pass sweep 16.5 → 10.3 dB, Electric piano II 11.2 → 5.2, Violins 11.0 → 5.4, Landing
+          12.7 → 10.3, Reed organ 6.1 → 3.8, Chimes 9.9 → 8.5, Take-off 5.4 → 4.0, Clavichord I 4.3 → 3.2, Clavinet 4.0 → 3.0.
+          <b>Further:</b> Church organ 8.5 → 10.8 and Pianet 7.6 → 9.7 in that run; in the video's run they score 5.7 and 8.8,
+          which is the run-to-run spread described below.</p>
+      </div>
+    </div>
+
+    <div class="prose">
+      <p>The schematic changes are not free on a pocket synth. Eight voices of Ring mod. now take 63&nbsp;% of the
+        FM-1's core, up from 54&nbsp;%: a second pulse to compute for the ring modulator, and a triangle for the
+        cross-mod.</p>
+    </div>
+  </section>
+
   <section class="more" id="november">
-    <h2>What the November round changed</h2>
+    <h2>What the first November round changed</h2>
     <div class="prose">
       <p>The October tuning decoded the presets from the Synthex's EPROMs and fitted the engine's knob laws to the
         recording: <a href="https://joakimeriksson.github.io/ai-smarthome/synths/synthex-tuning.html">that story is
@@ -258,9 +385,9 @@
       </div>
     </div>
     <div class="legend"><span><i class="dot" style="background:var(--before)"></i>Before November</span>
-      <span><i class="dot" style="background:var(--sc)"></i>After the three fixes</span></div>
+      <span><i class="dot" style="background:var(--sc)"></i>Now, after both rounds</span></div>
     <div class="chart-box" id="rounds"></div>
-    <p class="tour-cap"><span>Each preset's spectrum difference before and after, closest first. The mean went
+    <p class="tour-cap"><span>Each preset's spectrum difference before November and now, closest first. The mean went
       <span id="means"></span>.</span></p>
   </section>
 
@@ -307,7 +434,7 @@
     <aside class="note">Read a difference under a dB as noise. Two runs of the same notes, one with the recording played
       in between, score within 0.1 dB of each other on half the presets, but up to 3.5 dB apart on a few with slow attacks
       and long tails (Chorale, Chimes, Church organ), where what still rings from the previous preset depends on the run.
-      The round-by-round numbers above come from one kind of run, the video's from the other. And the transcription gets
+      The first four rounds' numbers come from one kind of run; the layer LFO's and the video's from the other. And the transcription gets
       some notes wrong: chords, and his joystick, are harder than single lines.</aside>
     <p class="prose" style="color:var(--ink2)">The tools are in the repository:
       <a href="https://github.com/joakimeriksson/scintilla-fm1/tree/main/demo/tour"><code>demo/tour/</code></a>
@@ -416,18 +543,19 @@ tour.addEventListener("keydown", (ev) => {
 
 // ---- the headline numbers
 const scores = P.map((p) => p.score);
-const roundMeans = [0, 1, 2, 3].map((i) => mean(P.map((p) => p.rounds[i])));
+const roundMeans = P[0].rounds.map((_, i) => mean(P.map((p) => p.rounds[i])));
+const ROUNDS = ["Original", "AC coupling", "Tracking, sustain", "Filtered chorus", "Layer LFO"];
 const within = (x) => P.filter((p) => p.score < x).length;
 for (const [b, s] of [
   [`${mean(scores).toFixed(1)} dB`, "the mean spectrum difference to the real Synthex over the forty, as the video shows them"],
   [`${within(5)} of 40`, `presets within 5 dB of the recording, ${within(3)} of them within 3 dB`],
-  [`${roundMeans[0].toFixed(1)} → ${roundMeans[3].toFixed(1)} dB`, "what the November round of tuning did to the mean, in three fixes"],
+  [`${roundMeans[0].toFixed(1)} → ${mean(scores).toFixed(1)} dB`, "what November's two rounds of tuning did to the mean: three fixes by measurement, then three from the schematics"],
 ]) {
   const d = el("div", { class: "stat" });
   d.append(el("b", {}, b), el("span", {}, s));
   $("stats").append(d);
 }
-$("means").textContent = roundMeans.map((m) => m.toFixed(2)).join(" → ") + " dB over the three fixes";
+$("means").textContent = [...roundMeans, mean(scores)].map((m) => m.toFixed(2)).join(" → ") + " dB, run by run";
 
 // ---- a preset's two spectra: the recording's and Scintilla's third-octave bands, level-free
 const LO = 30, HI = 12000, YMIN = -60, YMAX = 6;
@@ -548,12 +676,12 @@ for (const p of P) {
   tb.append(tr);
 }
 
-// ---- before and after November: a dot pair per preset, closest first
+// ---- before November and now: a dot pair per preset, closest first
 (function rounds() {
-  const rows = [...P].sort((a, b) => a.rounds[3] - b.rounds[3]);
+  const rows = [...P].sort((a, b) => a.score - b.score);
   const W = 1000, row = 19, m = { l: 150, r: 24, t: 26, b: 8 }, H = m.t + rows.length * row + m.b;
   const xmax = 18, x = (v) => m.l + (v / xmax) * (W - m.l - m.r);
-  const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Each preset's spectrum difference before and after the November fixes" });
+  const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": "Each preset's spectrum difference before November and now" });
   for (let v = 0; v <= xmax; v += 3) {
     svg.append(svgEl("line", { x1: x(v), x2: x(v), y1: m.t - 6, y2: H - m.b, stroke: "var(--grid)", "stroke-width": 1 }));
     const t = svgEl("text", { x: x(v), y: 14, "text-anchor": "middle", fill: "var(--dim)", "font-size": 12 });
@@ -562,7 +690,7 @@ for (const p of P) {
   }
   const box = $("rounds"), tt = el("div", { class: "tip" });
   rows.forEach((p, i) => {
-    const cy = m.t + i * row + row / 2, a = p.rounds[0], b = p.rounds[3];
+    const cy = m.t + i * row + row / 2, a = p.rounds[0], b = p.score;
     const g = svgEl("g");
     const lab = svgEl("text", { x: m.l - 10, y: cy + 4, "text-anchor": "end", fill: "var(--ink2)", "font-size": 12.5 });
     lab.textContent = `${p.slot} ${p.name}`;
@@ -572,8 +700,8 @@ for (const p of P) {
       svgEl("rect", { x: 0, y: cy - row / 2, width: W, height: row, fill: "transparent" }));
     g.addEventListener("mousemove", (ev) => {
       const r = box.getBoundingClientRect();
-      tt.innerHTML = `<b>${p.slot} ${p.name}</b><br>` + ["Original", "AC coupling", "Tracking, sustain", "Filtered chorus"]
-        .map((n, k) => `${n}: ${p.rounds[k].toFixed(1)} dB`).join("<br>");
+      tt.innerHTML = `<b>${p.slot} ${p.name}</b><br>` + ROUNDS.map((n, k) => `${n}: ${p.rounds[k].toFixed(1)} dB`).join("<br>") +
+        `<br>Now: ${p.score.toFixed(1)} dB`;
       tt.style.display = "block";
       tt.style.left = `${Math.min(ev.clientX - r.left + 14, r.width - tt.offsetWidth - 8)}px`;
       tt.style.top = `${ev.clientY - r.top + 14}px`;
@@ -584,14 +712,65 @@ for (const p of P) {
   box.append(svg, tt);
 })();
 
+// ---- the click: the treble (3 to 20 kHz) of a low C on Ring mod., per millisecond from the note's start, against its
+// median through 2 to 24 ms (measured from the recording at 13:09 and from the engine before and after)
+const ONSET = {"hw":[-16.6,-9.4,-1.0,0.1,-2.1,0.9,2.1,0.9,-0.1,-1.4,1.8,-0.1,-0.8,0.6,-0.9,0.8,0.8,-1.8,-2.2,0.2,-1.7,0.3,-1.2,3.0,-0.4,-1.7,-1.9,-1.2,-0.4,-3.8,-3.8],"before":[-34.6,-2.8,-1.2,-1.2,1.3,-1.9,-1.3,0.2,-1.0,-0.7,8.6,10.8,8.2,10.2,5.7,1.9,-1.9,-0.3,1.8,0.1,0.9,-0.6,-0.1,-3.8,-3.8,4.3,3.8,1.3,1.2,-3.2,-10.3],"now":[-38.1,-3.5,-0.7,-0.4,1.7,0.1,2.6,-1.1,-1.6,1.6,-1.0,0.7,-0.1,2.0,-0.1,1.7,-1.5,-1.1,1.8,-0.6,2.0,-0.2,0.1,0.4,-2.9,-3.5,-2.7,-6.4,-9.0,-8.2,-14.9]};
+(function onset() {
+  const W = 620, H = 210, m = { l: 44, r: 10, t: 10, b: 30 }, T0 = 2, T1 = 30, Y0 = -8, Y1 = 14;
+  const x = (t) => m.l + ((t - T0) / (T1 - T0)) * (W - m.l - m.r);
+  const y = (v) => m.t + ((Y1 - Math.max(Y0, Math.min(Y1, v))) / (Y1 - Y0)) * (H - m.t - m.b);
+  const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, role: "img",
+    "aria-label": "Treble level through the first 30 ms of a low note: the Synthex stays within 3 dB, Scintilla before the fix peaks at 11 dB between 10 and 14 ms, Scintilla now stays within 3 dB" });
+  for (const v of [-6, 0, 6, 12]) {
+    svg.append(svgEl("line", { x1: m.l, x2: W - m.r, y1: y(v), y2: y(v), stroke: v === 0 ? "var(--line)" : "var(--grid)", "stroke-width": 1 }));
+    const t = svgEl("text", { x: m.l - 6, y: y(v) + 4, "text-anchor": "end", fill: "var(--dim)", "font-size": 11 });
+    t.textContent = v === 0 ? "0 dB" : (v > 0 ? "+" : "") + v;
+    svg.append(t);
+  }
+  for (const t of [5, 10, 15, 20, 25, 30]) {
+    const e = svgEl("text", { x: x(t), y: H - 10, "text-anchor": t === 30 ? "end" : "middle", fill: "var(--dim)", "font-size": 11 });
+    e.textContent = t === 30 ? "30 ms" : t;
+    svg.append(e);
+  }
+  for (const [k, c, w] of [["hw", "var(--hw)", 2], ["before", "var(--before)", 2], ["now", "var(--sc)", 2.5]])
+    svg.append(svgEl("path", { d: ONSET[k].map((v, i) => [i + 0.5, v]).filter(([t]) => t >= T0 && t <= T1)
+      .map(([t, v], i) => `${i ? "L" : "M"}${x(t).toFixed(1)},${y(v).toFixed(1)}`).join(""),
+      fill: "none", stroke: c, "stroke-width": w, "stroke-linejoin": "round", "stroke-linecap": "round" }));
+  const peak = Math.max(...ONSET.before.slice(2, 24)), at = ONSET.before.indexOf(peak);
+  const lab = svgEl("text", { x: x(at + 0.5) + 10, y: y(peak) + 4, fill: "var(--ink2)", "font-size": 12 });
+  lab.textContent = `the click: +${peak.toFixed(0)} dB`;
+  svg.append(lab);
+  $("onset").append(svg);
+})();
+
+// the laser harp phrase before and now: two short files of their own
+const clip = new Audio();
+let clipBtn = null;
+const clipStop = () => { clip.pause(); if (clipBtn) clipBtn.classList.remove("playing"), clipBtn.textContent = clipBtn.dataset.label; clipBtn = null; };
+clip.addEventListener("ended", clipStop);
+document.querySelectorAll("[data-clip]").forEach((b) => {
+  b.dataset.label = b.textContent;
+  b.onclick = () => {
+    const was = clipBtn;
+    clipStop();
+    if (was === b) return;
+    stop();
+    clip.src = b.dataset.clip;
+    clip.play();
+    clipBtn = b;
+    b.classList.add("playing");
+    b.textContent = "■ Stop";
+  };
+});
+
 // ---- still off: the six furthest, with what their bands say (written from the data, page.py's spectra)
 const WHY = {
-  26: "Scintilla plays a few clean harmonics where the recording has a dense band: 10 dB less below 1 kHz, 10 to 17 dB more above 4 kHz. Either the sweep or the three high notes the transcription found are not what the Synthex played.",
-  39: "21 dB more above 4 kHz. Part of that is the transcription: it hears the mallet's strike as two short notes at the top of the keyboard, and Scintilla plays them.",
-  43: "One held note under a long sweep, 7 to 13 dB brighter above 250 Hz. The October tuning already suspected the top of the envelope table, which reads about twice too short on Chimes and Landing.",
-  37: "11 dB more between 1 and 4 kHz. It got worse with the key tracking (6.5 → 11.2): its synced second oscillator now sits under the filter's resonance near 2 kHz.",
-  23: "12 dB less bass and 5 to 7 dB more above 250 Hz. The DC fix moved it further away (7.5 → 9.6), the key tracking brought some back (8.5). Its mark in the recording is one of the uncertain middle twenty.",
-  22: "The same tilt as the organ: 12 dB less bass, 3 to 9 dB more above 250 Hz. None of the November fixes moved it.",
+  39: "12 dB more from 4 kHz and far more above 6 kHz, with a thinner bass. Part of that is the transcription: it hears the mallet's strike as two short notes at the top of the keyboard, and Scintilla plays them. No fix so far has moved it.",
+  26: "It was the furthest at 16.5 dB until its filter envelope was halved and its cutoff lowered against the recording. Above 500 Hz the two now agree within 4 dB. What is left sits below 300 Hz, where single bands are 15 dB off in both directions: the three notes the transcription found are probably not the ones played.",
+  31: "A tilt: 8 to 19 dB less below 150 Hz, 7 to 11 dB more from 400 Hz to 4 kHz. The DC fix brought it from 11.6 to 8.7; nothing since has helped.",
+  38: "20 dB less in the lowest octave it sounds in and 3 to 9 dB more above 1 kHz. The October tuning already suspected the top of the envelope table, which reads about twice too short on Chimes and Landing.",
+  43: "One held note under a long sweep. The shared LFO and the schematic's ring modulator and cross-mod brought it from 12.7 to 7.7 dB. It is still 3 to 6 dB brighter above 600 Hz, and single harmonics between 80 and 270 Hz are 10 to 20 dB off either way.",
+  49: "A 20 dB hole in the two bands around 600 Hz and otherwise close. That reads as a note or a harmonic the transcription missed, not as a filter.",
 };
 for (const p of byScore.slice(-6).reverse()) {
   const d = el("div");
