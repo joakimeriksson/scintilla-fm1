@@ -15,6 +15,13 @@ the host build's. A mismatch is a bug (in the engine, the compiler or the emulat
 
 ## Verified
 
+- 2026-11-11, the schematic's ring modulator (synthex-web 873dfdb, `PolyBlepSquare.mirror`; here `sq_mirror`,
+  `ring_of`, `sc_voice_t.dcr / pendm`, the lane's `s2x`, `mix_t.ring` = 2): for OSC2's pulse the ring output is
+  (A - A') / 2 + s1 (A + A') / 2, A' the pulse of width 1 - pw from the same phase and sync, from the raw waves, with
+  its own DC tracker (starts at dc2); other waveforms the raw product. `tests/run.sh` 320 pairs inside the limits
+  (level max 0.05 dB, spectrum median 0.014 dB); staged = per-sample on every preset; `tests/split.c`; FM-1 = host on
+  all eleven bench configs and the 80 patches. Cost (the second pulse's residuals, the ring loop): Ring mod. x8
+  54.3 -> 61.8 %, Landing 58.0 -> 66.8 %, Fat Sound 55.6 %, Metallic 59.2 % (unchanged: no ring).
 - 2026-11-10, the layer's LFO and the inverted depth knobs (synthex-web cf1fef1: `Lfo.sync` / `Lfo.advance`,
   `VoiceCore.syncLfo`, gen_factory.py's `PITCH_MOD` 0.09, `PWM_MOD` 2, `CUTOFF_MOD` 2, `AMP_MOD` 1 on depths of
   (255 - byte) / 255). 80 exact expansions

@@ -22,9 +22,10 @@ enum { ENV_IDLE, ENV_ATTACK, ENV_DECAY, ENV_SUSTAIN, ENV_RELEASE };
 #define MAX_DT 1932735283u                      /* 0.45 of a cycle: VoiceCore's dt clamp */
 #define PW_LO  3277                             /* 0.05, Q16 */
 #define PW_HI  62259                            /* 0.95 */
-/* VoiceCore's AC_COUPLING_HZ, 5 Hz: each oscillator reaches the mixer and the ring modulator through a
- * one-pole coupling that takes its DC off (a pulse of width pw carries 2 pw - 1 of it, which came out as
- * a thump on the narrow pulses). 1 - exp(-2 pi 5 / 44100), Q30 */
+/* VoiceCore's AC_COUPLING_HZ, 5 Hz: each oscillator, and the ring modulator's output, reaches the mixer
+ * through a one-pole coupling that takes its DC off (a pulse of width pw carries 2 pw - 1 of it, which
+ * came out as a thump on the narrow pulses). The ring modulator itself takes the oscillators as they
+ * are (ring_of). 1 - exp(-2 pi 5 / 44100), Q30 */
 #define DC_K   764639
 
 /* dc += k (s - dc); s - dc: the coupling, one oscillator sample (Q20) with its tracker (Q26: the
@@ -501,6 +502,36 @@ SC_OSC_FN int32_t osc_square(sc_osc_t *o, uint32_t dt, uint32_t pw)
     return s;
 }
 
+/* PolyBlepSquare.companion: the pulse of width q from the phase, sync and residual state the square is
+ * about to play from (call it before the square moves them): q = 1 - pw gives the pulse mirrored in time
+ * and inverted, the other half of the ring modulator. pendm: its residual after a sync. */
+static inline int32_t sq_mirror(uint32_t ph, uint32_t d, uint32_t q, int32_t tau, int after, int32_t *pendm)
+{
+    const uint32_t u = 0u - ph, ue = q - ph;
+    int32_t y = ph < q ? SC_ONE20 : -SC_ONE20;
+    if (tau < 0 || (u < d && frac16(u, d) < tau)) y += blep_before(u, d);
+    if (ph < q && (tau < 0 || (ue < d && frac16(ue, d) < tau))) y -= blep_before(ue, d);
+    if (after) y += *pendm; else y += blep_after(ph, d);
+    if (ph >= q) y -= blep_after(ph - q, d);
+    if (tau >= 0) {
+        const int32_t a = at_reset(ph, d, tau) < q ? 0 : 2 * SC_ONE20, uu = SC_ONE16 - tau;
+        y += (int32_t)(((int64_t)a * sq16(uu)) >> 17);
+        *pendm = -(int32_t)(((int64_t)a * sq16(tau)) >> 17);
+    }
+    return y;
+}
+
+/* VoiceCore's ring modulator, the Synthex's (board 410CST5800): OSC2 is a counter whose bits pass
+ * through XOR gates into the waveform DAC, and with RING MOD on the gates' other input is OSC1's pulse,
+ * so the ramp runs backwards while that pulse is high. Behind the DAC's pulse comparator that is
+ * pulse(pw) or its mirror image -pulse(1 - pw):  (A - A') / 2 + s1 (A + A') / 2, one amplitude
+ * throughout, where the product of two coupled pulses swelled with the long half of a narrow one (a
+ * click 10 ms into Ring mod.'s notes). s1, a, m: OSC1, OSC2's pulse and its mirror (sq_mirror), Q20. */
+static inline int32_t ring_of(int32_t s1, int32_t a, int32_t m)
+{
+    return (a - m) / 2 + sc_mul(s1, (a + m) / 2, 20);
+}
+
 /* PolyBlepTriangle: -1 at the start of the cycle, +1 at the middle, its corners PolyBLAMP-corrected;
  * a sync restarts it from -1 with a step, as the hardware's folded saw does */
 SC_OSC_FN int32_t osc_triangle(sc_osc_t *o, uint32_t dt)
@@ -621,6 +652,8 @@ void sc_voice_note_on(sc_voice_t *v, const sc_prep_t *p, int32_t note, int32_t v
          * down: the tracker starts at the waveform's mean (a pulse's 2 pw - 1), not at 0 */
         v->dc1 = L->o1_wave == SC_WAVE_SQR ? (2 * L->o1_pwm - SC_ONE16) * (1 << 10) : 0;
         v->dc2 = L->o2_wave == SC_WAVE_SQR ? (2 * L->o2_pwm - SC_ONE16) * (1 << 10) : 0;
+        v->dcr = L->o2_wave == SC_WAVE_SQR ? v->dc2 : (int32_t)(((int64_t)v->dc1 * v->dc2) >> 26);
+        v->pendm = 0;
     }
 
     v->off1 = L->o1_glide_amt * 256;
@@ -891,6 +924,8 @@ static void render_general(sc_voice_t *v, const sc_prep_t *p, int32_t *out, uint
 
         int32_t s1 = osc_tick(&v->o1, w1, dt1, pw1, &v->noise1);
         if (L->o2_sync && w1 != SC_WAVE_NOISE && v->o1.wrapped) v->o2.tau = wrap_tau(&v->o1, dt1);
+        int32_t s2x = 0;                        /* OSC2's mirrored pulse, for the ring modulator */
+        if (L->ring && w2 == SC_WAVE_SQR) s2x = sq_mirror(v->o2.ph, dt2, 0u - pw2, v->o2.tau, v->o2.after, &v->pendm);
         int32_t s2 = osc_tick(&v->o2, w2, dt2, pw2, &v->noise2);
         /* white noise shares OSC2's generator, as noiseW2 does */
         int32_t nz = 0;
@@ -898,10 +933,12 @@ static void render_general(sc_voice_t *v, const sc_prep_t *p, int32_t *out, uint
 
         v->prev1 = s1;                          /* cross-mod takes the oscillators as they are */
         v->prev2 = s2;
-        s1 = dc_block(s1, &v->dc1);             /* the mixer and the ring modulator, without their DC */
+        int32_t rm = 0;                         /* the ring modulator, of the two as they are */
+        if (L->ring) rm = dc_block(w2 == SC_WAVE_SQR ? ring_of(s1, s2, s2x) : sc_mul(s1, s2, 20), &v->dcr);
+        s1 = dc_block(s1, &v->dc1);             /* the mixer, without their DC */
         s2 = dc_block(s2, &v->dc2);
 
-        int32_t s2m = L->ring ? sc_mul(s1, s2, 20) : s2;
+        int32_t s2m = L->ring ? rm : s2;
         int32_t mixed = (int32_t)(((int64_t)s1 * p->mix1 + (int64_t)s2m * p->mix2 + (int64_t)nz * p->mixn) >> 16);
         mixed = sc_mul(mixed, p->atten, 16);
 
@@ -934,6 +971,7 @@ static const int32_t S_zero[256];              /* an LFO that is not routed read
 /* the passes' buffers: one set per lane (sc_voice.h), so that two cores can render voices at once */
 typedef struct {
     int32_t  amp[256], s1[256], s2[256], nz[256], e1[256], l1[256], l2[256];
+    int32_t  s2x[256];                          /* OSC2's mirrored pulse, for the ring modulator */
     uint32_t dt1[256], dt2[256], pw1[256];
     int32_t  key[256];                          /* the portamento pitch per sample, for key tracking */
     int64_t  pw2[256];                          /* OSC2's PWM sum before OSC1's cross-mod term */
@@ -958,6 +996,7 @@ typedef struct {
     int32_t *s, *nz;
     int32_t *wrap;
     const int32_t *reset;
+    int32_t *mir, *pendm;                       /* the square's mirrored pulse (sq_mirror), when the ring modulator wants it */
 } osc_io_t;
 
 static inline __attribute__((always_inline))
@@ -995,6 +1034,7 @@ void osc_loop(sc_osc_t *o, const int wave, const int synced, const osc_io_t *io,
             else
                 q = io->pw ? io->pw[i] : 0x80000000u;
             const uint32_t ue = q - ph;
+            if (io->mir) io->mir[i] = sq_mirror(ph, d, 0u - q, tau, after, io->pendm);
             y = ph < q ? SC_ONE20 : -SC_ONE20;
             if (tau < 0 || (u < d && frac16(u, d) < tau)) y += blep_before(u, d);
             if (ph < q && (tau < 0 || (ue < d && frac16(ue, d) < tau))) y -= blep_before(ue, d);
@@ -1072,7 +1112,7 @@ static void osc_run(sc_osc_t *o, int wave, const osc_io_t *io, uint32_t n)
  * passes go by coefficient segment (sc_voice_render's w->seg_at / w->seg_c): a fast filter envelope
  * makes a segment of nearly every sample, so a segment costs no more than loading its three
  * coefficients. */
-typedef struct { int32_t m1, m2, mn, at, k; int ring; } mix_t;
+typedef struct { int32_t m1, m2, mn, at, k; int ring; } mix_t;   /* ring: 1 the product, 2 ring_of with w->s2x */
 
 static void svf_pass(sc_svf_t *f, const uint32_t *at, const int32_t (*c)[3], uint32_t nseg, int32_t *x, int out_bp)
 {
@@ -1098,16 +1138,28 @@ static void mix_run(sc_lane_t *w, sc_voice_t *v, int mode, const mix_t *m, const
     const int32_t m1 = m->m1, m2 = m->m2, mn = m->mn, att = m->at;
     int32_t *x = w->mix;
     int32_t dc1 = v->dc1, dc2 = v->dc2;         /* the oscillators' coupling (dc_block), in the mix's loop */
+    int32_t dcr = v->dcr;                       /* and the ring modulator's output's */
     if (mn)                                     /* the noise joins the same sum before its shift */
         for (uint32_t i = 0; i < n; i++) {
+            int32_t rm = 0;
+            if (m->ring) rm = dc_block(m->ring == 2 ? ring_of(w->s1[i], w->s2[i], w->s2x[i]) : sc_mul(w->s1[i], w->s2[i], 20), &dcr);
             int32_t s1 = dc_block(w->s1[i], &dc1), s2 = dc_block(w->s2[i], &dc2);
-            int64_t acc = (int64_t)s1 * m1 + (int64_t)(m->ring ? sc_mul(s1, s2, 20) : s2) * m2 + (int64_t)w->nz[i] * mn;
+            int64_t acc = (int64_t)s1 * m1 + (int64_t)(m->ring ? rm : s2) * m2 + (int64_t)w->nz[i] * mn;
             x[i] = sc_mul((int32_t)(acc >> 16), att, 16);
+        }
+    else if (m->ring == 2)
+        for (uint32_t i = 0; i < n; i++) {
+            int32_t rm = dc_block(ring_of(w->s1[i], w->s2[i], w->s2x[i]), &dcr);
+            int32_t s1 = dc_block(w->s1[i], &dc1);
+            (void)dc_block(w->s2[i], &dc2);
+            x[i] = sc_mul((int32_t)(((int64_t)s1 * m1 + (int64_t)rm * m2) >> 16), att, 16);
         }
     else if (m->ring)
         for (uint32_t i = 0; i < n; i++) {
-            int32_t s1 = dc_block(w->s1[i], &dc1), s2 = dc_block(w->s2[i], &dc2);
-            x[i] = sc_mul((int32_t)(((int64_t)s1 * m1 + (int64_t)sc_mul(s1, s2, 20) * m2) >> 16), att, 16);
+            int32_t rm = dc_block(sc_mul(w->s1[i], w->s2[i], 20), &dcr);
+            int32_t s1 = dc_block(w->s1[i], &dc1);
+            (void)dc_block(w->s2[i], &dc2);
+            x[i] = sc_mul((int32_t)(((int64_t)s1 * m1 + (int64_t)rm * m2) >> 16), att, 16);
         }
     else
         for (uint32_t i = 0; i < n; i++) {
@@ -1116,6 +1168,7 @@ static void mix_run(sc_lane_t *w, sc_voice_t *v, int mode, const mix_t *m, const
         }
     v->dc1 = dc1;
     v->dc2 = dc2;
+    v->dcr = dcr;
 
     switch (mode) {
     case SC_FLT_LP24:
@@ -1348,8 +1401,8 @@ void sc_voice_render_lane(sc_voice_t *v, const sc_prep_t *p, int32_t *out, uint3
     int sync = L->o2_sync && w1 != SC_WAVE_NOISE;
     int need_nz = (use & SC_USE_NOISE) && !L->noise_pink;
     int nz_in_osc2 = need_nz && w2 == SC_WAVE_NOISE;
-    osc_io_t io1 = { w->dt1, w->pw1, 0, 0, 0, 0, &v->noise1, w->s1, 0, sync ? w->wrap : 0, 0 };
-    osc_io_t io2 = { w->dt2, 0, 0, 0, 0, 0, &v->noise2, w->s2, nz_in_osc2 ? w->nz : 0, 0, sync ? w->wrap : 0 };
+    osc_io_t io1 = { w->dt1, w->pw1, 0, 0, 0, 0, &v->noise1, w->s1, 0, sync ? w->wrap : 0, 0, 0, 0 };
+    osc_io_t io2 = { w->dt2, 0, 0, 0, 0, 0, &v->noise2, w->s2, nz_in_osc2 ? w->nz : 0, 0, sync ? w->wrap : 0, 0, 0 };
     w->prev1[0] = v->prev1;
     osc_run(&v->o1, w1, &io1, n);
     if (w2 == SC_WAVE_SQR) {
@@ -1358,6 +1411,7 @@ void sc_voice_render_lane(sc_voice_t *v, const sc_prep_t *p, int32_t *out, uint3
         io2.xs = w->prev1;
         io2.xk = p->cross;
         io2.pwbase = p->pw2;
+        if (L->ring) { io2.mir = w->s2x; io2.pendm = &v->pendm; }
     }
     osc_run(&v->o2, w2, &io2, n);
     if (use & SC_USE_NOISE) {
@@ -1368,7 +1422,8 @@ void sc_voice_render_lane(sc_voice_t *v, const sc_prep_t *p, int32_t *out, uint3
     v->prev2 = w->s2[n - 1];
 
     /* 4. mix, filter, gain, per coefficient segment */
-    mix_t m = { p->mix1, p->mix2, (use & SC_USE_NOISE) ? p->mixn : 0, p->atten, p->k_q28, L->ring };
+    mix_t m = { p->mix1, p->mix2, (use & SC_USE_NOISE) ? p->mixn : 0, p->atten, p->k_q28,
+                L->ring ? (w2 == SC_WAVE_SQR ? 2 : 1) : 0 };
     w->seg_at[nseg] = n;
     mix_run(w, v, mode, &m, w->seg_at, (const int32_t (*)[3])w->seg_c, nseg, out, n);
 #undef NEW_SEG

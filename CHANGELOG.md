@@ -13,6 +13,13 @@
   confirms: the organs' tremolo is a fifth of what it was (Church organ, Reed organ: 1 dB of ripple, not 4-5),
   Tremolo piano's and Electric piano II's a little deeper, the pulse-width sweeps of Chorale, Clavinet and the
   sweeps follow the inverted knob.
+- The ring modulator is the Synthex's own, from the voice board's schematic (410CST5800), as synthex-web's now is:
+  not a multiplier but the XOR gates in front of an oscillator's waveform DAC, which invert the wave while the
+  other oscillator's pulse is high. The Laser Harp (Ring mod.) no longer starts its low notes with a hard click: the
+  product of the two coupled oscillators was 8 dB louder for part of each cycle, a treble burst 10-14 ms into the
+  note, 11 dB over it where the recording of the instrument has 3 (now 3). Clavichord II and Landing, the other two
+  presets with it, come closer to the recording (4.3 -> 3.0 dB and 10.0 -> 8.2); Ring mod.'s sustained spectrum is
+  0.5 dB further (2.9 -> 3.4). It costs: Ring mod. x8 54 -> 62 % of a core, Landing 58 -> 67 %.
 - Three ROM presets corrected against the recording of the instrument, as synthex-web's bank: High pass sweep
   (filter envelope at half its decoded amount, cutoff 8 semitones lower), Filtered brass (envelope x 0.7, cutoff 6
   semitones higher) and Clavichord I (envelope x 0.7, cutoff an octave lower).
