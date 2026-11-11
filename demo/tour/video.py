@@ -147,7 +147,10 @@ def film(keys, end, d):
             shrink(ppm)
         time.sleep(0.2)
     for ppm in sorted(fr.glob("*.ppm")):
-        shrink(ppm)
+        try:
+            shrink(ppm)
+        except OSError:                                    # the last frame, cut off when the run ended
+            ppm.unlink()
     logf.seek(0)
     log = logf.read()
     if p.returncode or "halt" in log:
