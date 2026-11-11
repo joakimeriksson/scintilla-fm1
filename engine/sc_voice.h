@@ -70,6 +70,8 @@ typedef struct {
     int32_t l1, l2;                             /* the last LFO outputs, for the block-rate cutoff */
     int32_t prev1, prev2;                       /* the last oscillator outputs, for cross-mod */
     int32_t dc1, dc2;                           /* the oscillators' DC as their coupling sees it, Q26 */
+    int32_t dcr;                                /* the ring modulator's output's, the same */
+    int32_t pendm;                              /* OSC2's mirrored pulse (the ring modulator's): its residual after a sync */
     uint32_t block;                             /* samples into the coefficient block */
     int32_t a1, a2, a3;                         /* SVF coefficients, Q30 */
     int32_t cn;                                 /* the cutoff (semitones Q16) they were computed for */
