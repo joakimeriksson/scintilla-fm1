@@ -15,6 +15,33 @@ the host build's. A mismatch is a bug (in the engine, the compiler or the emulat
 
 ## Verified
 
+- 2026-11-11, cross-mod from the DAC wave (synthex-web 462fac9, `prevOsc1 / 2`; here `xmod_tri`, `xmod_ringed`,
+  and the ROM decoder's depth 36438 = 0.556): `v->prev1 / prev2` are the oscillator's triangle from its phase after
+  the sample (4 |ph - 1/2| - 1), or for the ringed OSC2 its ramp, negated while s1 > 0; noise keeps its sample. The
+  staged render rebuilds OSC1's phases from `dt1` (OSC1 runs free). `tests/run.sh` 320 pairs inside the limits (level
+  max 0.04 dB, spectrum median 0.014 dB), 80 exact expansions (PATCH_SHA256 renewed), staged = per-sample; FM-1 =
+  host on the eleven configs and the 80 patches; `emu_test.py` passes. Cost: Ring mod. x8 61.8 -> 63.4 %, Fat Sound
+  55.6 -> 57.9 %, Metallic 59.2 -> 61.8 %, Landing 66.8 -> 69.7 %.
+- 2026-11-11, the schematic's ring modulator (synthex-web 873dfdb, `PolyBlepSquare.mirror`; here `sq_mirror`,
+  `ring_of`, `sc_voice_t.dcr / pendm`, the lane's `s2x`, `mix_t.ring` = 2): for OSC2's pulse the ring output is
+  (A - A') / 2 + s1 (A + A') / 2, A' the pulse of width 1 - pw from the same phase and sync, from the raw waves, with
+  its own DC tracker (starts at dc2); other waveforms the raw product. `tests/run.sh` 320 pairs inside the limits
+  (level max 0.05 dB, spectrum median 0.014 dB); staged = per-sample on every preset; `tests/split.c`; FM-1 = host on
+  all eleven bench configs and the 80 patches. Cost (the second pulse's residuals, the ring loop): Ring mod. x8
+  54.3 -> 61.8 %, Landing 58.0 -> 66.8 %, Fat Sound 55.6 %, Metallic 59.2 % (unchanged: no ring).
+- 2026-11-10, the layer's LFO and the inverted depth knobs (synthex-web cf1fef1: `Lfo.sync` / `Lfo.advance`,
+  `VoiceCore.syncLfo`, gen_factory.py's `PITCH_MOD` 0.09, `PWM_MOD` 2, `CUTOFF_MOD` 2, `AMP_MOD` 1 on depths of
+  (255 - byte) / 255). 80 exact expansions
+  (PATCH_SHA256 renewed, `SC_ROM_PITCH_1E4` gone); `tests/run.sh` 320 pairs inside the limits, level median 0.000
+  max 0.05 dB, spectrum median 0.014 max 2.11 dB, staged = per-sample on every preset; `tests/split.c` also checks
+  that no voice's LFO leaves the layer's phase (16000 blocks, two threads); FM-1 = host on the eleven configs and
+  the 80 patches. The firmware was not rebuilt or run in fm1-live.
+- 2026-11-10, three ROM presets corrected one by one against the recording, as gen_factory.py's `FILTER_ENV_FIX`
+  (synthex-web 47cc14e; `fix_st`, `fix_env` in `sc_rom_load`): High pass sweep (envelope x 0.5, cutoff -8 st),
+  Filtered brass (x 0.7, +6 st), Clavichord I (x 0.7, -12 st). A corrected amount is computed from the unrounded
+  one (725 v / 60 milli), not from the table: the table's rounded value times 0.5 lands on the other side of a tie.
+  80 exact expansions against the regenerated bank (PATCH_SHA256 renewed); `tests/run.sh` 320 pairs inside the
+  limits; FM-1 = host on the eleven configs and the 80 patches. `tests/run.sh` needs a python3 with numpy.
 - 2026-11-10, the ROM bank's key tracking (1.0 st per key), filter sustain (0.7) and Filtered chorus's envelope
   (x 0.7), synthex-web 452883a, in `sc_rom_load`: 80 exact expansions against gen_factory.py's bank (`tests/presets_test.py`, PATCH_SHA256 renewed);
   `tests/run.sh` 320 pairs inside the limits; FM-1 = host on the eleven configs and the 80 patches.
@@ -56,8 +83,13 @@ the host build's. A mismatch is a bug (in the engine, the compiler or the emulat
 
 ## Ported faithfully, though they look like bugs (fix them in synthex-web first, then here)
 
-- The LFO delay ramp restarts only when the LFO is key-synced; with sync off (every factory patch) it plays once,
-  from when the voice was created.
+- Since 2026-11-10 the LFO is the layer's, as on the hardware, though every voice still carries a copy: a silent
+  voice's copy keeps running (`sc_voice_advance`: the voice's render does it for a silent voice; the synth, which
+  does not render one, in `sc_render_end` for the voices whose `stepped` is clear), so the copies stay in phase as
+  long as every voice passes every block. `sc_voice_lfo_sync` restarts LFO 1 and its delay ramp on every voice of
+  the layer: `layer_on` calls it for a key that finds no other held, on a patch with an LFO delay (the firmware's
+  rule for the LFO board's SYNC strobe). `host/sc_render.c`'s one-voice renders and `tools/ref_render.mjs` strobe
+  the same way. A patch with `lfo.sync` (none in the factory bank) still restarts its own copy at every note.
 - Every voice seeds its noise the same (`0xdeadbeef`, pink `0xfeedface`): the noise of a chord is correlated.
 - A silent voice stops its 128-sample coefficient clock at the start of a run, not mid-run, so the length of the
   runs it is given is part of what it plays (the next note's first filter update moves). The app gives it 128
