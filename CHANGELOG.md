@@ -1,6 +1,10 @@
 # Changelog
 
-## Unreleased
+## 0.3.0 (2026-11-11)
+
+Identity `FM-1_96300300`. The second round of tuning against the recording of the instrument, this time from
+Elka's schematics too: [the story, preset by preset](https://joakimeriksson.github.io/scintilla-fm1/tuning/). The
+forty PRESETS' mean distance to the recording went from 6.3 dB (0.2.0) to 4.9.
 
 **The sound**
 
