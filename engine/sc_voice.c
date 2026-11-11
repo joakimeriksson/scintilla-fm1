@@ -421,6 +421,11 @@ static inline int32_t tri_at(uint32_t ph)
     uint32_t d = ph < 0x80000000u ? 0x80000000u - ph : ph - 0x80000000u;   /* |phase - 1/2| */
     return SC_ONE20 - (int32_t)(d >> 10);                             /* 1 - 4 |phase - 1/2| */
 }
+/* what cross-mod takes from an oscillator: not its output but its DAC wave in front of the pulse
+ * comparator (board 410CST5800), the counter's ramp folded into a triangle, or on the ringed
+ * oscillator the ramp as the other oscillator's pulse (s1) flips it. VoiceCore's prevOsc1 / 2. */
+static inline int32_t xmod_tri(uint32_t ph) { return -tri_at(ph); }
+static inline int32_t xmod_ringed(uint32_t ph, int32_t s1) { return s1 > 0 ? -saw_at(ph) : saw_at(ph); }
 static inline int32_t tri_bend(uint32_t dt) { return (int32_t)(dt >> 9); }    /* 8 dt, Q20 per sample */
 static inline int32_t sine_at(uint32_t ph)
 {
@@ -931,8 +936,9 @@ static void render_general(sc_voice_t *v, const sc_prep_t *p, int32_t *out, uint
         int32_t nz = 0;
         if (use & SC_USE_NOISE) nz = L->noise_pink ? pink_next(&v->pink) : sc_rand20(&v->noise2);
 
-        v->prev1 = s1;                          /* cross-mod takes the oscillators as they are */
-        v->prev2 = s2;
+        v->prev1 = w1 == SC_WAVE_NOISE ? s1 : xmod_tri(v->o1.ph);    /* cross-mod takes the DAC waves */
+        v->prev2 = w2 == SC_WAVE_NOISE ? s2
+                 : L->ring && w2 == SC_WAVE_SQR ? xmod_ringed(v->o2.ph, s1) : xmod_tri(v->o2.ph);
         int32_t rm = 0;                         /* the ring modulator, of the two as they are */
         if (L->ring) rm = dc_block(w2 == SC_WAVE_SQR ? ring_of(s1, s2, s2x) : sc_mul(s1, s2, 20), &v->dcr);
         s1 = dc_block(s1, &v->dc1);             /* the mixer, without their DC */
@@ -1397,16 +1403,18 @@ void sc_voice_render_lane(sc_voice_t *v, const sc_prep_t *p, int32_t *out, uint3
     }
 
     /* 2. OSC1, keeping its wraps when OSC2 syncs to it; 3. OSC2. xs: OSC1's previous sample, for the
-     * OSC1 -> OSC2 PWM cross-mod (w->s1 shifted by one, its first from the last block) */
+     * OSC1 -> OSC2 PWM cross-mod (its DAC wave one sample back, the first from the last block) */
     int sync = L->o2_sync && w1 != SC_WAVE_NOISE;
     int need_nz = (use & SC_USE_NOISE) && !L->noise_pink;
     int nz_in_osc2 = need_nz && w2 == SC_WAVE_NOISE;
     osc_io_t io1 = { w->dt1, w->pw1, 0, 0, 0, 0, &v->noise1, w->s1, 0, sync ? w->wrap : 0, 0, 0, 0 };
     osc_io_t io2 = { w->dt2, 0, 0, 0, 0, 0, &v->noise2, w->s2, nz_in_osc2 ? w->nz : 0, 0, sync ? w->wrap : 0, 0, 0 };
     w->prev1[0] = v->prev1;
+    uint32_t xph = v->o1.ph;                    /* OSC1's phase runs free: after sample i it is this + dt1[0..i] */
     osc_run(&v->o1, w1, &io1, n);
     if (w2 == SC_WAVE_SQR) {
-        for (uint32_t i = 1; i < n; i++) w->prev1[i] = w->s1[i - 1];
+        if (w1 == SC_WAVE_NOISE) for (uint32_t i = 1; i < n; i++) w->prev1[i] = w->s1[i - 1];
+        else for (uint32_t i = 1; i < n; i++) { xph += w->dt1[i - 1]; w->prev1[i] = xmod_tri(xph); }
         io2.pwacc = w->pw2;
         io2.xs = w->prev1;
         io2.xk = p->cross;
@@ -1418,8 +1426,9 @@ void sc_voice_render_lane(sc_voice_t *v, const sc_prep_t *p, int32_t *out, uint3
         if (L->noise_pink) for (uint32_t i = 0; i < n; i++) w->nz[i] = pink_next(&v->pink);
         else if (!nz_in_osc2) for (uint32_t i = 0; i < n; i++) w->nz[i] = sc_rand20(&v->noise2);
     }
-    v->prev1 = w->s1[n - 1];
-    v->prev2 = w->s2[n - 1];
+    v->prev1 = w1 == SC_WAVE_NOISE ? w->s1[n - 1] : xmod_tri(v->o1.ph);
+    v->prev2 = w2 == SC_WAVE_NOISE ? w->s2[n - 1]
+             : L->ring && w2 == SC_WAVE_SQR ? xmod_ringed(v->o2.ph, w->s1[n - 1]) : xmod_tri(v->o2.ph);
 
     /* 4. mix, filter, gain, per coefficient segment */
     mix_t m = { p->mix1, p->mix2, (use & SC_USE_NOISE) ? p->mixn : 0, p->atten, p->k_q28,
