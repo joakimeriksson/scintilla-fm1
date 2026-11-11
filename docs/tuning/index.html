@@ -104,6 +104,8 @@
   .p-foot button { height: 32px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--sc); background: #24160b;
     color: var(--ink); font: 600 13.5px var(--sans); cursor: pointer; }
   .p-foot button.playing { background: var(--sc); color: #1d0f03; }
+  .p-foot button.hw { border-color: var(--hw); background: #0b1624; }
+  .p-foot button.hw.playing { background: var(--hw); color: #04101f; }
   .p-rounds { font-size: 13px; color: var(--dim); margin: 6px 0 0; }
   .tip { position: absolute; z-index: 5; pointer-events: none; padding: 6px 9px; border-radius: 7px; background: rgba(20, 18, 23, .96);
     border: 1px solid var(--line); font-size: 12.5px; line-height: 1.45; white-space: nowrap; display: none; color: var(--ink); }
@@ -207,8 +209,8 @@
   <section class="more" id="all">
     <h2>All forty</h2>
     <div class="prose"><p>The four banks of the Synthex's ROM, in its own numbering. Each spectrogram shows the recording
-      above Scintilla, the same stretch and the same notes, each on its own loudest point. Play it, then follow the link
-      to the same moment in the recording on Per Kristian's site.</p></div>
+      above Scintilla, the same stretch and the same notes, each on its own loudest point. Play the Synthex, then
+      Scintilla, at the same loudness; the link goes to the same moment of the whole recording on Per Kristian's site.</p></div>
     <div class="controls" role="group" aria-label="Sort the presets">Sort:
       <button data-sort="slot" aria-pressed="true">By program</button>
       <button data-sort="best" aria-pressed="false">Closest first</button>
@@ -245,8 +247,8 @@
         <div class="p-foot">
           <button type="button" data-clip="harp-before.mp3" aria-label="Play the laser harp phrase on Scintilla before the fix">▶ Before</button>
           <button type="button" data-clip="harp-now.mp3" aria-label="Play the laser harp phrase on Scintilla now">▶ Now</button>
-          <a href="https://www.perkristian.net/sounds/synthex_presets.mp3#t=789" target="_blank" rel="noopener">The Synthex at 13:09 ↗</a>
-          <span>the same four notes, levels as played</span>
+          <button type="button" class="hw" id="harp-real" aria-label="Play Ring mod. on the Synthex, from the recording">▶ Synthex 1981</button>
+          <span>Scintilla: the same four notes before and now. The Synthex: its own three, from the recording at 13:09.</span>
         </div>
         <p>The cause was the first round's own fix. Since then each oscillator reached the ring modulator without its
           DC, and the ring modulator multiplied the two. Ring mod.'s first oscillator is a 72&nbsp;% pulse: without its
@@ -443,14 +445,15 @@
 
   <footer>
     <p>The Synthex recording: Per Kristian Risvik, <a href="https://www.perkristian.net/sounds/">perkristian.net</a>.
-      It is not copied here: each preset links to its moment in his file, and this page shows only its spectra and
-      spectrograms. The audio on this page is Scintilla's.</p>
+      The excerpts of it on this page, three to four and a half seconds a preset, are here with his permission; each
+      preset links to its moment in his file. Everything else you hear on this page is Scintilla.</p>
     <p>GPL-3.0-only, <a href="https://github.com/joakimeriksson/scintilla-fm1">source on GitHub</a>. Not affiliated with
       or endorsed by Elka, Generalmusic, Behringer / Music Tribe, M-VAVE or Jean-Michel Jarre.</p>
   </footer>
 </main>
 
 <audio id="audio" src="tour.mp3" preload="none"></audio>
+<audio id="synthex" src="synthex.mp3" preload="none"></audio>
 <script src="data.js"></script>
 <script>
 "use strict";
@@ -478,34 +481,38 @@ const mean = (a) => a.reduce((x, y) => x + y, 0) / a.length;
 const fmtHz = (f) => f >= 1000 ? `${(f / 1000).toFixed(f >= 10000 ? 0 : 1)} kHz` : `${f} Hz`;
 
 // ---- the sound: one file, the video's sound track; a preset plays its stretch of it
-const audio = $("audio");
-let stopAt = null, playingBtn = null;
-function play(from, until, btn) {
-  if (playingBtn) playingBtn.classList.remove("playing"), playingBtn.textContent = "▶ Play";
+// and the recording's stretches, in a file of their own (synthex.mp3), with Per Kristian Risvik's permission
+const audio = $("audio"), synthex = $("synthex");
+let stopAt = null, playingBtn = null, active = audio;
+function play(from, until, btn, a = audio) {
+  active.pause();
+  active = a;
+  if (playingBtn) playingBtn.classList.remove("playing"), playingBtn.textContent = playingBtn.dataset.label;
   playingBtn = btn || null;
-  if (btn) btn.classList.add("playing"), btn.textContent = "■ Stop";
+  if (btn) btn.dataset.label = btn.dataset.label || btn.textContent, btn.classList.add("playing"), btn.textContent = "■ Stop";
   stopAt = until;
-  audio.currentTime = Math.max(0, from);
-  audio.play();
+  a.currentTime = Math.max(0, from);
+  a.play();
   $("tour-stop").hidden = false;
 }
 function stop() {
-  audio.pause();
+  active.pause();
   stopAt = null;
-  if (playingBtn) playingBtn.classList.remove("playing"), playingBtn.textContent = "▶ Play";
+  if (playingBtn) playingBtn.classList.remove("playing"), playingBtn.textContent = playingBtn.dataset.label;
   playingBtn = null;
   $("tour-stop").hidden = true;
   $("tour-head").style.opacity = 0;
 }
 $("tour-stop").onclick = stop;
 audio.addEventListener("ended", stop);
+synthex.addEventListener("ended", stop);
 
 const presetAt = (t) => [...P].reverse().find((p) => t >= p.t - 0.35);
 function tick() {
-  if (!audio.paused) {
-    const t = audio.currentTime;
+  if (!active.paused) {
+    const t = active.currentTime;
     if (stopAt != null && t >= stopAt) stop();
-    else {
+    else if (active === audio) {
       const head = $("tour-head");
       head.style.opacity = 1;
       head.style.left = `${(t / END) * 100}%`;
@@ -646,10 +653,12 @@ function card(p, lazy = true) {
   sc.append(el("b", {}, `${p.score.toFixed(1)} dB`), el("small", {}, "spectrum difference"));
   head.append(el("div", { class: "led" }, p.slot), name, sc);
   const foot = el("div", { class: "p-foot" });
-  const btn = el("button", { type: "button", "aria-label": `Play ${p.name} on Scintilla` }, "▶ Play");
+  const btn = el("button", { type: "button", "aria-label": `Play ${p.name} on Scintilla` }, "▶ Scintilla");
   btn.onclick = () => (playingBtn === btn ? stop() : play(p.t - 0.05, p.t + p.len + 0.4, btn));
+  const real = el("button", { type: "button", class: "hw", "aria-label": `Play ${p.name} on the Synthex, from the recording` }, "▶ Synthex 1981");
+  real.onclick = () => (playingBtn === real ? stop() : play(p.h, p.h + p.len, real, synthex));
   const a = el("a", { href: `${RECORDING}#t=${Math.floor(p.at)}`, target: "_blank", rel: "noopener" }, `The Synthex at ${mmss(p.at)} ↗`);
-  foot.append(btn, a, el("span", {}, `${p.notes} note${p.notes === 1 ? "" : "s"}, ${p.len} s`));
+  foot.append(real, btn, a, el("span", {}, `${p.notes} note${p.notes === 1 ? "" : "s"}, ${p.len} s`));
   c.append(head, specFigure(p, lazy), spectrumChart(p), foot);
   return c;
 }
@@ -748,6 +757,10 @@ const clip = new Audio();
 let clipBtn = null;
 const clipStop = () => { clip.pause(); if (clipBtn) clipBtn.classList.remove("playing"), clipBtn.textContent = clipBtn.dataset.label; clipBtn = null; };
 clip.addEventListener("ended", clipStop);
+{
+  const p = P.find((q) => q.slot === 46), b = $("harp-real");
+  b.onclick = () => { clipStop(); playingBtn === b ? stop() : play(p.h, p.h + p.len, b, synthex); };
+}
 document.querySelectorAll("[data-clip]").forEach((b) => {
   b.dataset.label = b.textContent;
   b.onclick = () => {

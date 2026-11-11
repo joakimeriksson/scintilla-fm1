@@ -9,10 +9,12 @@ build/tour/scintilla-presets.mp4: run video.py without --ab first) and writes in
   tour.mp3          the video's sound track (Scintilla alone); the page plays each preset from it
   tour.webp         its spectrogram, the whole tour in one strip
   spec/{slot}.webp  the recording's stretch above Scintilla's, the same notes, one colour scale
+  synthex.mp3       the recording's forty stretches, one after the other, each as loud as Scintilla's
   data.js           per preset: the stretch, the notes, the video's score, the two third-octave spectra
-                    (level-free) and where it sits in tour.mp3; ROUND.txt (video.py's printouts of
-                    earlier runs, oldest first) add each preset's score in each round
-The recording itself stays here: only its spectrum and spectrogram go on the page."""
+                    (level-free) and where it sits in tour.mp3 and synthex.mp3; ROUND.txt (video.py's
+                    printouts of earlier runs, oldest first) add each preset's score in each round
+The stretches of the recording (3 to 4.5 s a preset) are on the page with Per Kristian Risvik's permission
+(2026-11-11); the rest of it stays here."""
 import json, re, subprocess, sys
 from pathlib import Path
 import numpy as np
@@ -93,6 +95,8 @@ def image(db, ref, width, height):
 
 presets = []
 W_, H_, GAP = 1200, 260, 8
+mix = T.read_wav(track)                         # the video's sound track: a stretch of the recording as loud as its
+real, real_at, PAUSE = [], 0.0, 0.25            # the recording's stretches in a row, PAUSE s between them
 for s in segs:
     k = int(s["len"] * FS)
     h = T.read_wav(hw, s["hw_at"], s["len"])
@@ -106,11 +110,25 @@ for s in segs:
     im.save(OUT / "spec" / f"{s['slot']}.webp", quality=82, method=6)
     presets.append(dict(slot=s["slot"], name=s["name"], at=round(s["hw_at"], 2), len=s["len"],
                         t=round(s["t_sc"], 3), notes=len(s["evs"]) // 2, score=round(V.closeness(h, e), 2),
-                        rounds=[r.get(s["slot"]) for r in past], hw=sh, sc=se, keep=keep))
+                        rounds=[r.get(s["slot"]) for r in past], hw=sh, sc=se, keep=keep, h=round(real_at, 3)))
+    m = mix[j:j + k]
+    c = h * (np.sqrt(np.mean(m ** 2)) / np.sqrt(np.mean(h ** 2)))
+    n = int(0.04 * FS)
+    c[:n] *= np.linspace(0, 1, n)
+    c[-n:] *= np.linspace(1, 0, n)
+    real += [c, np.zeros(int(PAUSE * FS))]
+    real_at += len(c) / FS + PAUSE
     print(f"  {s['slot']} {s['name']:18} {presets[-1]['score']:5.2f} dB", flush=True)
 
 # the whole tour in one strip, near its loudest point at the top of the scale
-x = T.read_wav(track)
+x = mix
+rw = V.OUT / "synthex.wav"
+import wave
+with wave.open(str(rw), "wb") as w:
+    w.setnchannels(1); w.setsampwidth(2); w.setframerate(FS)
+    w.writeframes(np.round(np.clip(np.concatenate(real), -1, 1) * 32767).astype(np.int16).tobytes())
+subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(rw), "-c:a", "libmp3lame", "-b:a", "96k",
+                str(OUT / "synthex.mp3")], check=True)
 S = spectrogram(x, hop=512)
 image(S, np.percentile(S, 99.9), 3200, 360).save(OUT / "tour.webp", quality=80, method=6)
 subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(track), "-c:a", "libmp3lame", "-b:a", "128k",
