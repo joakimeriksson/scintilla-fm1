@@ -165,7 +165,7 @@
     <p class="lede">Scintilla plays the Elka Synthex's forty factory presets on an M-VAVE FM-1. Each one was tuned
       towards Per Kristian Risvik's recording of a real 1981 Synthex: the notes he plays were found in the recording,
       the FM-1 played them on the same preset, and the two spectra were compared. Here are all forty: how close each
-      comes, what two rounds of tuning changed, why the second one meant reading Elka's schematics, and what is still off.</p>
+      comes, what each round of tuning changed, why the second one meant reading Elka's schematics, and what is still off.</p>
 
     <div class="tour">
       <div class="tour-scroll">
@@ -220,7 +220,7 @@
     <details>
       <summary>The numbers as a table</summary>
       <div class="tbl"><table id="table"><thead><tr><th>#</th><th>Preset</th><th class="n">Original</th><th class="n">AC coupling</th>
-        <th class="n">Tracking, sustain</th><th class="n">Filtered chorus</th><th class="n">Layer LFO</th><th class="n">In the video</th><th class="n">Notes</th></tr></thead><tbody></tbody></table></div>
+        <th class="n">Tracking, sustain</th><th class="n">Filtered chorus</th><th class="n">Layer LFO</th><th class="n">Schematics</th><th class="n">In the video</th><th class="n">Notes</th></tr></thead><tbody></tbody></table></div>
     </details>
   </section>
 
@@ -246,7 +246,7 @@
         <div class="p-chart" id="onset"></div>
         <div class="p-foot">
           <button type="button" data-clip="harp-before.mp3" aria-label="Play the laser harp phrase on Scintilla before the fix">▶ Before</button>
-          <button type="button" data-clip="harp-now.mp3" aria-label="Play the laser harp phrase on Scintilla now">▶ Now</button>
+          <button type="button" data-clip="harp-now.mp3" aria-label="Play the laser harp phrase on Scintilla after the fix">▶ After</button>
           <button type="button" class="hw" id="harp-real" aria-label="Play Ring mod. on the Synthex, from the recording">▶ Synthex 1981</button>
           <span>Scintilla: the same four notes before and now. The Synthex: its own three, from the recording at 13:09.</span>
         </div>
@@ -336,8 +336,8 @@
           its decoded amount, cutoff 8 semitones lower), Filtered brass and Clavichord I.</p>
         <p class="moved"><b>Closer:</b> High pass sweep 16.5 → 10.3 dB, Electric piano II 11.2 → 5.2, Violins 11.0 → 5.4, Landing
           12.7 → 10.3, Reed organ 6.1 → 3.8, Chimes 9.9 → 8.5, Take-off 5.4 → 4.0, Clavichord I 4.3 → 3.2, Clavinet 4.0 → 3.0.
-          <b>Further:</b> Church organ 8.5 → 10.8 and Pianet 7.6 → 9.7 in that run; in the video's run they score 5.7 and 8.8,
-          which is the run-to-run spread described below.</p>
+          <b>Further:</b> Church organ 8.5 → 10.8 and Pianet 7.6 → 9.7 in that run; in the next they scored 5.7 and 8.8, and
+          in the video's 10.8 and 9.7 again, which is the run-to-run spread described below.</p>
       </div>
     </div>
 
@@ -345,6 +345,45 @@
       <p>The schematic changes are not free on a pocket synth. Eight voices of Ring mod. now take 63&nbsp;% of the
         FM-1's core, up from 54&nbsp;%: a second pulse to compute for the ring modulator, and a triangle for the
         cross-mod.</p>
+    </div>
+  </section>
+
+  <section class="more" id="hit">
+    <h2>Then a hard start, heard on a keyboard</h2>
+    <div class="prose">
+      <p>The third find came from playing, not from a score. On a keyboard running Scintilla, every laser harp note
+        still began harder than the recording's. Recorded from the keyboard's own audio and held against the Synthex,
+        the first 30 ms of a note were 5 dB brighter above 3 kHz; 120 ms later the two agreed. The score, which compares
+        three whole seconds, could not see it.</p>
+    </div>
+    <div class="fixes">
+      <div class="fix">
+        <h3>The filter does not open all the way <span>synthex-web #51 · Scintilla #28, 0.3.2</span></h3>
+        <p>Ring mod.'s filter envelope adds 114 semitones to the cutoff within 2 ms. The engine let the filter follow it
+          to its own limit, 16.7 kHz, and it stood wide open for the first 20 ms of every note. The plucked presets did
+          the same: Chunky Synth, Funky Clav., Clavichord II and Bass pluck were 7 to 18 dB brighter than the
+          recording in their loudest 30 ms.</p>
+        <p>A slower envelope does not explain it: the recording's notes reach full level within about 5 ms and stay
+          bright for about 30, as Scintilla's do. Nor does a smaller envelope: at half its reach Ring mod. was still
+          6 dB over. A ceiling does, for all of them. The filter now opens no further than 8.4 kHz. A second Synthex on
+          the same preset, in a video with the full audio band, agrees on the height: its attack jumps 6.5 dB over the
+          sound that follows at 3 to 9 kHz and 12 above; Scintilla's 7.6 and 11 with the ceiling, 11 and 26 without.</p>
+        <p>It is a fit to two recordings, not a reading of the circuit, and it has a cost. A preset whose cutoff knob
+          and key tracking alone put the filter above 8.4 kHz loses that top: Electric piano I.</p>
+        <p class="moved"><b>Closer:</b> Violins 6.7 → 5.6 dB, Reed organ 5.3 → 3.8, Clavichord II 3.2 → 2.7, Ceilos 5.1 → 4.6,
+          Ring mod. 2.9 → 2.8; and each note's loudest 30 ms above 3 kHz, over the forty, 6.1 → 5.1 dB from the recording's.
+          <b>Further:</b> Electric piano I 5.6 → 7.4, Clavinet 3.0 → 3.5, Brass III 5.7 → 6.2. Church organ 5.7 → 10.8 and
+          Chorale 3.4 → 6.3 sound the same as before: how it was measured, below, says why their scores moved. They take
+          the mean from 4.9 to 5.1.</p>
+      </div>
+      <div class="fix">
+        <h3>The recording's own softness <span>a lesson, not a fix</span></h3>
+        <p>After the ceiling the start of a note still sounded harder than the recording's. This time the engine was
+          right. The recording is a 56 kb/s MP3, and at that rate the coder spreads a rise of a millisecond and a
+          half over several. The keyboard's take, put through the same coding, starts as softly as the recording does;
+          and in the full-band video a Synthex note rises in 1.7 ms, the keyboard's in 1.4. So the blue buttons on this
+          page play the Synthex a little rounder at the start of each note than it was.</p>
+      </div>
     </div>
   </section>
 
@@ -387,7 +426,7 @@
       </div>
     </div>
     <div class="legend"><span><i class="dot" style="background:var(--before)"></i>Before November</span>
-      <span><i class="dot" style="background:var(--sc)"></i>Now, after both rounds</span></div>
+      <span><i class="dot" style="background:var(--sc)"></i>Now</span></div>
     <div class="chart-box" id="rounds"></div>
     <p class="tour-cap"><span>Each preset's spectrum difference before November and now, closest first. The mean went
       <span id="means"></span>.</span></p>
@@ -433,10 +472,12 @@
       <li><b>The score.</b> The spectrum difference described above, between the recording's stretch and the
         firmware's.</li>
     </ol>
-    <aside class="note">Read a difference under a dB as noise. Two runs of the same notes, one with the recording played
-      in between, score within 0.1 dB of each other on half the presets, but up to 3.5 dB apart on a few with slow attacks
-      and long tails (Chorale, Chimes, Church organ), where what still rings from the previous preset depends on the run.
-      The first four rounds' numbers come from one kind of run; the layer LFO's and the video's from the other. And the transcription gets
+    <aside class="note">Read a difference under a dB as noise, and on a few presets much more. A stretch is cut where
+      its three seconds end, often in the middle of a held note, and that cut leaks a little sound into every band. On
+      Church organ and Chorale the leak lands in the bands below 170 Hz, where the recording has only mains hum and
+      Scintilla nothing at all: there the score depends on where in the wave the cut falls. Two firmwares whose Church
+      organ is the same in every band to half a dB scored 5.7 and 10.8. Chimes and Pianet swing the same way, by less.
+      The first four rounds' numbers come from one kind of run; the later ones from another. And the transcription gets
       some notes wrong: chords, and his joystick, are harder than single lines.</aside>
     <p class="prose" style="color:var(--ink2)">The tools are in the repository:
       <a href="https://github.com/joakimeriksson/scintilla-fm1/tree/main/demo/tour"><code>demo/tour/</code></a>
@@ -551,12 +592,12 @@ tour.addEventListener("keydown", (ev) => {
 // ---- the headline numbers
 const scores = P.map((p) => p.score);
 const roundMeans = P[0].rounds.map((_, i) => mean(P.map((p) => p.rounds[i])));
-const ROUNDS = ["Original", "AC coupling", "Tracking, sustain", "Filtered chorus", "Layer LFO"];
+const ROUNDS = ["Original", "AC coupling", "Tracking, sustain", "Filtered chorus", "Layer LFO", "Schematics"];
 const within = (x) => P.filter((p) => p.score < x).length;
 for (const [b, s] of [
   [`${mean(scores).toFixed(1)} dB`, "the mean spectrum difference to the real Synthex over the forty, as the video shows them"],
   [`${within(5)} of 40`, `presets within 5 dB of the recording, ${within(3)} of them within 3 dB`],
-  [`${roundMeans[0].toFixed(1)} → ${mean(scores).toFixed(1)} dB`, "what November's two rounds of tuning did to the mean: three fixes by measurement, then three from the schematics"],
+  [`${roundMeans[0].toFixed(1)} → ${mean(scores).toFixed(1)} dB`, "what November's tuning did to the mean: three fixes by measurement, three from the schematics, and one found by ear on a keyboard"],
 ]) {
   const d = el("div", { class: "stat" });
   d.append(el("b", {}, b), el("span", {}, s));
@@ -783,6 +824,7 @@ const WHY = {
   31: "A tilt: 8 to 19 dB less below 150 Hz, 7 to 11 dB more from 400 Hz to 4 kHz. The DC fix brought it from 11.6 to 8.7; nothing since has helped.",
   38: "20 dB less in the lowest octave it sounds in and 3 to 9 dB more above 1 kHz. The October tuning already suspected the top of the envelope table, which reads about twice too short on Chimes and Landing.",
   43: "One held note under a long sweep. The shared LFO and the schematic's ring modulator and cross-mod brought it from 12.7 to 7.7 dB. It is still 3 to 6 dB brighter above 600 Hz, and single harmonics between 80 and 270 Hz are 10 to 20 dB off either way.",
+  23: "The same sound as in the round before, where it scored 5.7: the two firmwares' Church organ agrees in every band to half a dB. The score moved in the bands below 170 Hz, where the recording has mains hum and Scintilla nothing, so that what is compared there is what leaks from the stretch's cut end. See how it was measured.",
   49: "A 20 dB hole in the two bands around 600 Hz and otherwise close. That reads as a note or a harmonic the transcription missed, not as a filter.",
 };
 for (const p of byScore.slice(-6).reverse()) {
