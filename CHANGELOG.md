@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- **The hard hit at the start of a note.** Laser Harp (Ring mod.) and the other plucked presets (Chunky Synth, Funky
+  Clav., Clavichord II, Bass pluck) began each note too bright: their filter envelopes swing far past the top of
+  the filter's range, and the filter stood wide open at 16.7 kHz for the first 20 ms. The recording of the
+  instrument has it top out lower, and a second Synthex on the same preset agrees: the filter now opens no further
+  than 8.4 kHz. Measured on an SMK-37's own audio against the recording, the treble of a Ring mod. note's first
+  30 ms went from 4.8 dB over to about 2 over. The forty PRESETS' onsets above 3 kHz: 6.1 -> 5.1 dB from the
+  recording's.
+
 ## 0.3.1 (2026-11-11)
 
 Identity `FM-1_96300301`.

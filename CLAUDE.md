@@ -15,6 +15,12 @@ the host build's. A mismatch is a bug (in the engine, the compiler or the emulat
 
 ## Verified
 
+- 2026-11-12, the cutoff's ceiling (synthex-web eef5122, `CUTOFF_CEILING` 120 = `SC_CUT_CEIL`: the filter opens
+  no further than 8.4 kHz; it was 132). Found by ear on an SMK-37: Ring mod.'s notes began with a hard hit, its
+  filter envelope holding the filter wide open for 20 ms. Against synthex-web at eef5122: 320 pairs inside the
+  limits, level median 0.000 max 0.07 dB, spectrum median 0.011 dB; staged = per-sample on every preset; FM-1 =
+  host on all eleven bench configs and the 80 patches. No cost (a constant): Ring mod. x8 63.2 %. On the SMK-37's
+  USB audio against the recording (the notes' loudest 30 ms above 3 kHz): +4.8 dB -> +1.4 to +2.2.
 - 2026-11-11, cross-mod from the DAC wave (synthex-web 462fac9, `prevOsc1 / 2`; here `xmod_tri`, `xmod_ringed`,
   and the ROM decoder's depth 36438 = 0.556): `v->prev1 / prev2` are the oscillator's triangle from its phase after
   the sample (4 |ph - 1/2| - 1), or for the ringed OSC2 its ramp, negated while s1 > 0; noise keeps its sample. The
