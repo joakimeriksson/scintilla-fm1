@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.3.2 (2026-11-12)
+
+Identity `FM-1_96300302`.
 
 - **The hard hit at the start of a note.** Laser Harp (Ring mod.) and the other plucked presets (Chunky Synth, Funky
   Clav., Clavichord II, Bass pluck) began each note too bright: their filter envelopes swing far past the top of
