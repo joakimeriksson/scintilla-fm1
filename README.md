@@ -109,3 +109,5 @@ GPL-3.0-only (`LICENSE`), as the FM-1 firmware platforms it will join. The engin
 (BSD-2-Clause, Joakim Eriksson). `fm1/crt0.S` and `fm1/bench.ld` come from fm1-emu's fm1-sid (BSD-2-Clause).
 "Elka" and "Synthex" are names of their owners; "M-VAVE" and "FM-1" belong to theirs. Scintilla is not affiliated
 with or endorsed by Elka, Generalmusic, Behringer / Music Tribe or M-VAVE.
+
+You can also try Scintilla in the browser, no flashing needed, in the free community [FM-1 Emulator](https://fm1-emulator.atst.tools/).
