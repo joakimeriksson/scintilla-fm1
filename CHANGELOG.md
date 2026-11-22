@@ -3,8 +3,8 @@
 ## Unreleased
 
 - **Your own sounds, in fm1-dock.** As a module of fm1-dock, Scintilla keeps sounds of your own: press SAVE, turn
-  PRESETS to one of USR 1 to 12, press SAVE again, and the sound as it plays is kept. Any other button, or five
-  seconds, and it is not. Your sounds come after the factory's on PRESETS (and as program changes 80 up), and they
+  PRESETS to one of USR 1 to 12, press SAVE again, and the sound as it plays is kept. SAVE's light blinks while it
+  asks, faster for the last of its ten seconds; any other button, or no answer, and it is not kept. Your sounds come after the factory's on PRESETS (and as program changes 80 up), and they
   are in fm1-dock's preset backups. The firmware on its own has no room set aside for them yet: there SAVE does
   nothing, as before.
 
