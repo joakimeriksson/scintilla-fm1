@@ -1,7 +1,14 @@
 # Changelog
 
-## Unreleased
+## 0.3.3 (2026-11-25)
 
+Identity `FM-1_96300303`.
+
+- **The screen on newer FM-1s.** FM-1s made from late 2026 (often with the 0xB36014 flash) have another display
+  panel. Scintilla set only the colour format and inversion and left the panel's voltages and gamma at the
+  controller's defaults: on the new panel the blacks washed out and most pages were hard to read. It now sends
+  M-Vave's own table for the FM-1 (m-vave/fm1_open, GPLv3), as the official firmware does; the older panel looks as
+  before.
 - **Your own sounds, in fm1-dock.** As a module of fm1-dock, Scintilla keeps sounds of your own: press SAVE, turn
   PRESETS to one of USR 1 to 12, press SAVE again, and the sound as it plays is kept. SAVE's light blinks while it
   asks, faster for the last of its ten seconds; any other button, or no answer, and it is not kept. Your sounds come after the factory's on PRESETS (and as program changes 80 up), and they
